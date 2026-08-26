@@ -24,3 +24,5 @@
 - [x] Usar o identificador de compartilhamento real da Homebrew ativa nos controles de copiar e abrir leitura.
 - [x] Marcar na ficha compartilhável quais campos ou valores foram personalizados no modo manual.
 - [x] Persistir e validar campos específicos de Técnica e Voto, refletindo as pendências reais no construtor.
+- [x] Confirmar o repositório Git remoto e o branch de destino para a versão validada.
+- [ ] Enviar a versão validada do Homebrew Forge ao repositório Git remoto.
