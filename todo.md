@@ -39,7 +39,7 @@
 - [x] Consolidar no motor de regras as fórmulas e validações estruturadas de Técnica, Voto e Invocação.
 - [x] Commitar as alterações validadas, fazer push para main e confirmar o conteúdo no repositório público.
 
-- [ ] Escolher o provedor externo e preparar a configuração de deploy pelo GitHub.
+- [x] Escolher o provedor externo e preparar a configuração de deploy pelo GitHub.
 - [ ] Configurar banco e secrets obrigatórios sem expor credenciais.
 - [ ] Executar o deploy externo e validar health check, autenticação e frontend.
 - [ ] Registrar no README o provedor, comandos e URL final do deploy externo.
