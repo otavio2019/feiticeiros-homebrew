@@ -9,7 +9,7 @@
     "build:vercel": "npm run build:client && npm run build:function",
     "build:client": "vite build",
     "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "build:function": "esbuild 'api/trpc/[...trpc].ts' --platform=node --packages=external --bundle --format=esm --outfile='api/trpc/[...trpc].js'",
+    "build:function": "esbuild server/vercel.ts --platform=node --packages=external --bundle --format=esm --outfile='api/trpc/[...trpc].js'",
     "verify:function": "npm run build:function && node scripts/verify-vercel-function.mjs",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
