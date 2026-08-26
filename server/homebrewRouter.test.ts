@@ -41,7 +41,7 @@ function createContext(): TrpcContext {
       openId: "homebrew-test-user",
       name: "Teste",
       email: "teste@example.com",
-      loginMethod: "manus",
+      loginMethod: "password",
       role: "user",
       createdAt: new Date(),
       updatedAt: new Date(),

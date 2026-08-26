@@ -3,6 +3,8 @@ import {
   calculateAttributeModifier,
   buildHomebrewValidation,
   calculateInvocationStats,
+  getSpellCost,
+  isTechniqueCostAllowed,
   calculateTechniqueDifficulty,
   isVowCombinationAllowed,
   SPELL_COST_BY_LEVEL,
@@ -19,6 +21,11 @@ describe("regras estruturadas de Homebrew", () => {
     expect(SPELL_COST_BY_LEVEL[0]).toBe(0);
     expect(SPELL_COST_BY_LEVEL[3]).toBe(8);
     expect(SPELL_COST_BY_LEVEL[5]).toBe(20);
+    expect(getSpellCost(3)).toBe(8);
+    expect(getSpellCost(6)).toBeNull();
+    expect(isTechniqueCostAllowed(3, 8)).toBe(true);
+    expect(isTechniqueCostAllowed(3, 2)).toBe(false);
+    expect(isTechniqueCostAllowed(3, 2, true)).toBe(true);
   });
 
   it("rejeita combinações incompatíveis de duração e peso para voto próprio", () => {

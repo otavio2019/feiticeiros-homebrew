@@ -1,6 +1,7 @@
-import { and, desc, eq, like, ne, or } from "drizzle-orm";
+import { and, desc, eq, gt, like, ne, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
+  authSessions,
   homebrewElements,
   homebrewImages,
   homebrewModules,
@@ -43,6 +44,59 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   updateSet.role = values.role;
   updateSet.lastSignedIn = values.lastSignedIn;
   await database.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+}
+
+export async function getUserById(id: number) {
+  const database = await getDb();
+  if (!database) return undefined;
+  const result = await database.select().from(users).where(eq(users.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getUserByEmail(email: string) {
+  const database = await getDb();
+  if (!database) return undefined;
+  const result = await database.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
+  return result[0];
+}
+
+export async function createLocalUser(input: { email: string; name: string | null; passwordHash: string }) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  const openId = `local_${crypto.randomUUID()}`;
+  await database.insert(users).values({
+    openId,
+    name: input.name,
+    email: input.email,
+    normalizedEmail: input.email.toLowerCase(),
+    passwordHash: input.passwordHash,
+    loginMethod: "password",
+  });
+  return getUserByOpenId(openId);
+}
+
+export async function createAuthSession(userId: number, tokenHash: string, expiresAt: Date) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  await database.insert(authSessions).values({ userId, tokenHash, expiresAt });
+}
+
+export async function getUserBySessionTokenHash(tokenHash: string) {
+  const database = await getDb();
+  if (!database) return undefined;
+  const result = await database
+    .select({ user: users })
+    .from(authSessions)
+    .innerJoin(users, eq(authSessions.userId, users.id))
+    .where(and(eq(authSessions.tokenHash, tokenHash), gt(authSessions.expiresAt, new Date())))
+    .limit(1);
+  return result[0]?.user;
+}
+
+export async function deleteAuthSession(tokenHash: string) {
+  const database = await getDb();
+  if (!database) return;
+  await database.delete(authSessions).where(eq(authSessions.tokenHash, tokenHash));
 }
 
 export async function getUserByOpenId(openId: string) {

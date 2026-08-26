@@ -29,3 +29,12 @@
 - [ ] Confirmar e aplicar visibilidade pública ao site publicado do Homebrew Forge.
 - [x] Criar um repositório GitHub público para o Homebrew Forge após a autorização da conta.
 - [x] Verificar a sessão do GitHub conectada e publicar o branch main do projeto.
+
+- [x] Remover dependências Manus do bootstrap, build, autenticação, storage e artefatos públicos.
+- [x] Consolidar autenticação local com sessões persistentes e tela de login/cadastro.
+- [x] Consolidar uploads de imagem com Cloudinary e remover o proxy de storage interno.
+- [x] Atualizar documentação final para instalação e deploy em hosts Node.js externos.
+- [ ] Confirmar explicitamente a visibilidade pública do domínio publicado e registrar a URL final acessível.
+- [ ] Executar validação final de produção e sincronizar a versão validada no GitHub.
+- [x] Consolidar no motor de regras as fórmulas e validações estruturadas de Técnica, Voto e Invocação.
+- [ ] Commitar as alterações validadas, fazer push para main e confirmar o conteúdo no repositório público.

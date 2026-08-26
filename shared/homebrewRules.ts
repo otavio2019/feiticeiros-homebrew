@@ -37,6 +37,15 @@ export function calculateAttributeModifier(value: number) {
   return Math.floor((value - 10) / 2);
 }
 
+export function getSpellCost(level: number): number | null {
+  if (!Number.isInteger(level) || level < 0 || level > 5) return null;
+  return SPELL_COST_BY_LEVEL[level as keyof typeof SPELL_COST_BY_LEVEL];
+}
+
+export function isTechniqueCostAllowed(level: number, cost: number, manualMode = false) {
+  return manualMode || getSpellCost(level) === cost;
+}
+
 export function calculateTechniqueDifficulty(
   characterLevel: number,
   attributeValue: number,
@@ -110,7 +119,7 @@ export function buildHomebrewValidation(
     base.push(
       { key: "technique-type", label: "Tipo de feitiço", valid: Boolean(String(data.techniqueType ?? "").trim()), message: "Escolha o tipo do feitiço." },
       { key: "technique-level", label: "Nível do feitiço", valid: Number.isInteger(level) && level >= 0 && level <= 5, message: "Informe um nível de feitiço entre 0 e 5." },
-      { key: "technique-cost", label: "Custo em energia", valid: manualMode || cost === SPELL_COST_BY_LEVEL[level as keyof typeof SPELL_COST_BY_LEVEL], message: "O custo diverge do padrão do nível escolhido." },
+      { key: "technique-cost", label: "Custo em energia", valid: isTechniqueCostAllowed(level, cost, manualMode), message: "O custo diverge do padrão do nível escolhido." },
     );
   }
 
