@@ -1,22 +1,87 @@
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, BookOpen, Copy, Link2, ShieldCheck, WandSparkles } from "lucide-react";
+import { calculateInvocationStats, INVOCATION_GRADE_RULES, type InvocationGrade } from "@shared/homebrewRules";
+import { ArrowLeft, BookOpen, Copy, Flame, Link2, ShieldCheck, WandSparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useRoute } from "wouter";
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
 
 export default function SharedHomebrew() {
   const [, params] = useRoute("/s/:shareId");
   const shareId = params?.shareId ?? "";
   const query = trpc.homebrew.shared.useQuery({ shareId }, { enabled: Boolean(shareId) && !shareId.endsWith("-demo") });
   const isDemo = shareId.endsWith("-demo");
-  const homebrew = isDemo ? { title: "Jardim dos Espelhos Partidos", summary: "Uma técnica de reflexos que converte os danos recebidos em ecos amaldiçoados.", modules: [{ id: 1, type: "origem" }, { id: 2, type: "tecnicas" }, { id: 3, type: "votos" }, { id: 4, type: "shikigami" }], manualMode: false } : query.data;
+  const demoHomebrew = shareId === "sombra-demo"
+    ? {
+        title: "Sombra de Papel Carmesim",
+        summary: "Shikigami de suporte especializado em selos, distrações táticas e reconhecimento.",
+        modules: [{ id: 1, type: "shikigami" }],
+        manualMode: false,
+        data: {
+          shikigami: {
+            name: "Sombra de Papel Carmesim",
+            grade: "quarto",
+            userLevel: 4,
+            proficiencyBonus: 2,
+            attributes: { forca: 2, destreza: 4, constituicao: 2, inteligencia: 1, presenca: 1 },
+            abilities: [{ id: "demo-selo", name: "Selo de Distração", description: "Cria um selo visível que desloca a atenção de um alvo por um instante." }],
+          },
+        },
+      }
+    : { title: "Jardim dos Espelhos Partidos", summary: "Uma técnica de reflexos que converte os danos recebidos em ecos amaldiçoados.", modules: [{ id: 1, type: "origem" }, { id: 2, type: "tecnicas" }, { id: 3, type: "votos" }, { id: 4, type: "shikigami" }], manualMode: false };
+  const homebrew = isDemo ? demoHomebrew : query.data;
 
-  const copy = async () => { try { await navigator.clipboard.writeText(window.location.href); toast.success("Link copiado."); } catch { toast.message("Use a URL desta página para compartilhar."); } };
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(window.location.href); toast.success("Link copiado."); }
+    catch { toast.message("Use a URL desta página para compartilhar."); }
+  };
 
   if (query.isLoading && !isDemo) return <div className="grid min-h-screen place-items-center bg-[#0e0d15] text-sm text-stone-400">Preparando ficha de leitura...</div>;
   if (!homebrew) return <div className="grid min-h-screen place-items-center bg-[#0e0d15] text-center text-stone-300"><div><p className="text-lg font-semibold">Ficha indisponível</p><Link href="/" className="mt-3 inline-block text-sm text-rose-300">Voltar ao Forge</Link></div></div>;
-  const coverImageUrl = "coverImageUrl" in homebrew ? homebrew.coverImageUrl : null;
-  const manualNotes = "data" in homebrew && typeof homebrew.data?.manualNotes === "string" ? homebrew.data.manualNotes : "";
-  const customFields = "data" in homebrew && Array.isArray(homebrew.data?.customFields) ? homebrew.data.customFields.map(String) : [];
 
-  return <main className="min-h-screen bg-[#0e0d15] px-4 py-6 text-stone-100 sm:px-7 sm:py-9"><div className="mx-auto max-w-4xl"><header className="flex items-center justify-between"><Link href="/" className="flex items-center gap-2 text-xs font-semibold text-stone-400 hover:text-stone-100"><ArrowLeft size={15} /> Homebrew Forge</Link><button onClick={copy} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-stone-300 hover:bg-white/9"><Copy size={14} /> Copiar link</button></header><article className="mt-8 overflow-hidden rounded-3xl border border-white/8 bg-[#17141f] shadow-2xl shadow-black/20"><div className="relative h-48 overflow-hidden bg-gradient-to-br from-rose-900/80 via-[#402044] to-[#171a31]" style={coverImageUrl ? { backgroundImage: `linear-gradient(rgba(40,10,35,.48), rgba(23,20,31,.76)), url(${coverImageUrl})`, backgroundPosition: "center", backgroundSize: "cover" } : undefined}><div className="absolute -right-10 -top-14 h-72 w-72 rounded-full border border-rose-200/15" /><div className="absolute bottom-7 left-7 flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-xl bg-black/20 text-rose-100"><WandSparkles size={23} /></span><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-rose-100/70">Ficha de Homebrew</p><p className="mt-1 text-sm text-rose-50">Feiticeiros & Maldições</p></div></div></div><div className="p-7 sm:p-10"><div className="flex flex-col justify-between gap-5 sm:flex-row"><div className="max-w-2xl"><h1 className="font-serif text-3xl font-medium text-white sm:text-4xl">{homebrew.title}</h1><p className="mt-4 text-sm leading-relaxed text-stone-400">{homebrew.summary}</p></div><div className="h-fit rounded-xl border border-white/8 bg-white/[0.025] px-4 py-3 text-right"><p className="text-[10px] uppercase tracking-[0.12em] text-stone-500">Status</p><p className="mt-1 text-xs font-semibold text-emerald-300">Pronta para leitura</p></div></div>{homebrew.manualMode && <div className="mt-5 rounded-xl border border-fuchsia-300/15 bg-fuchsia-500/[0.07] p-4 text-[11px] leading-relaxed text-fuchsia-100"><div className="flex items-center gap-2 font-semibold"><WandSparkles size={14} /> Conteúdo personalizado em modo manual</div>{customFields.length > 0 && <div className="mt-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-fuchsia-200/75">Campos personalizados</p><div className="mt-2 flex flex-wrap gap-1.5">{customFields.map(field => <span key={field} className="rounded-md border border-fuchsia-300/15 bg-black/10 px-2 py-1 text-[10px] text-fuchsia-100">{field}</span>)}</div></div>}{manualNotes ? <p className="mt-3 whitespace-pre-wrap text-stone-300">{manualNotes}</p> : <p className="mt-2 text-stone-400">O autor marcou esta ficha como personalizada; consulte as notas dele para detalhes adicionais.</p>}</div>}<div className="my-8 border-t border-white/8" /><section><div className="flex items-center gap-2"><BookOpen size={16} className="text-rose-300" /><h2 className="text-sm font-semibold text-white">Estrutura da Homebrew</h2></div><div className="mt-4 grid gap-3 sm:grid-cols-2">{homebrew.modules.map(module => { const moduleImage = "images" in homebrew ? homebrew.images.find(image => image.moduleId === module.id) : undefined; return <div key={module.id} className="overflow-hidden rounded-xl border border-white/8 bg-white/[0.025]">{moduleImage && <img src={moduleImage.url} alt={moduleImage.altText || `Ilustração de ${module.type}`} className="h-24 w-full object-cover" />}<div className="p-4"><div className="flex items-center gap-2 text-xs font-semibold text-stone-200"><Link2 size={14} className="text-rose-300" /> {String(module.type).replace(/^./, letter => letter.toUpperCase())}</div><p className="mt-2 text-[11px] leading-relaxed text-stone-500">Esta seção faz parte da estrutura modular desta ficha.</p></div></div>; })}</div></section><div className="mt-8 flex items-start gap-3 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] p-4"><ShieldCheck size={17} className="mt-0.5 text-emerald-400" /><p className="text-xs leading-relaxed text-stone-400">Esta é uma ficha de leitura. Conteúdos personalizados, quando houver, são identificados pelo autor no construtor.</p></div></div></article></div></main>;
+  const coverImageUrl = "coverImageUrl" in homebrew ? homebrew.coverImageUrl : null;
+  const data = "data" in homebrew ? asRecord(homebrew.data) : null;
+  const manualNotes = typeof data?.manualNotes === "string" ? data.manualNotes : "";
+  const customFields = Array.isArray(data?.customFields) ? data.customFields.map(String) : [];
+  const shikigami = asRecord(data?.shikigami);
+  const images = "images" in homebrew && Array.isArray(homebrew.images) ? homebrew.images : [];
+
+  return (
+    <main className="min-h-screen bg-[#0e0d15] px-4 py-6 text-stone-100 sm:px-7 sm:py-9">
+      <div className="mx-auto max-w-4xl">
+        <header className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 text-xs font-semibold text-stone-400 hover:text-stone-100"><ArrowLeft size={15} /> Homebrew Forge</Link>
+          <button onClick={copy} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-stone-300 hover:bg-white/9"><Copy size={14} /> Copiar link</button>
+        </header>
+        <article className="mt-8 overflow-hidden rounded-3xl border border-white/8 bg-[#17141f] shadow-2xl shadow-black/20">
+          <div className="relative h-48 overflow-hidden bg-gradient-to-br from-rose-900/80 via-[#402044] to-[#171a31]" style={coverImageUrl ? { backgroundImage: `linear-gradient(rgba(40,10,35,.48), rgba(23,20,31,.76)), url(${coverImageUrl})`, backgroundPosition: "center", backgroundSize: "cover" } : undefined}>
+            <div className="absolute -right-10 -top-14 h-72 w-72 rounded-full border border-rose-200/15" />
+            <div className="absolute bottom-7 left-7 flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-xl bg-black/20 text-rose-100"><WandSparkles size={23} /></span><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-rose-100/70">Ficha de Homebrew</p><p className="mt-1 text-sm text-rose-50">Feiticeiros & Maldições</p></div></div>
+          </div>
+          <div className="p-7 sm:p-10">
+            <div className="flex flex-col justify-between gap-5 sm:flex-row"><div className="max-w-2xl"><h1 className="font-serif text-3xl font-medium text-white sm:text-4xl">{homebrew.title}</h1><p className="mt-4 text-sm leading-relaxed text-stone-400">{homebrew.summary}</p></div><div className="h-fit rounded-xl border border-white/8 bg-white/[0.025] px-4 py-3 text-right"><p className="text-[10px] uppercase tracking-[0.12em] text-stone-500">Status</p><p className="mt-1 text-xs font-semibold text-emerald-300">Pronta para leitura</p></div></div>
+            {homebrew.manualMode && <div className="mt-5 rounded-xl border border-fuchsia-300/15 bg-fuchsia-500/[0.07] p-4 text-[11px] leading-relaxed text-fuchsia-100"><div className="flex items-center gap-2 font-semibold"><WandSparkles size={14} /> Conteúdo personalizado em modo manual</div>{customFields.length > 0 && <div className="mt-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-fuchsia-200/75">Campos personalizados</p><div className="mt-2 flex flex-wrap gap-1.5">{customFields.map(field => <span key={field} className="rounded-md border border-fuchsia-300/15 bg-black/10 px-2 py-1 text-[10px] text-fuchsia-100">{field}</span>)}</div></div>}{manualNotes ? <p className="mt-3 whitespace-pre-wrap text-stone-300">{manualNotes}</p> : <p className="mt-2 text-stone-400">O autor marcou esta ficha como personalizada; consulte as notas dele para detalhes adicionais.</p>}</div>}
+            {shikigami && <ShikigamiReadCard sheet={shikigami} />}
+            <div className="my-8 border-t border-white/8" />
+            <section><div className="flex items-center gap-2"><BookOpen size={16} className="text-rose-300" /><h2 className="text-sm font-semibold text-white">Estrutura da Homebrew</h2></div><div className="mt-4 grid gap-3 sm:grid-cols-2">{homebrew.modules.map(module => { const moduleImage = images.find(image => image.moduleId === module.id); return <div key={module.id} className="overflow-hidden rounded-xl border border-white/8 bg-white/[0.025]">{moduleImage && <img src={moduleImage.url} alt={moduleImage.altText || `Ilustração de ${module.type}`} className="h-24 w-full object-cover" />}<div className="p-4"><div className="flex items-center gap-2 text-xs font-semibold text-stone-200"><Link2 size={14} className="text-rose-300" /> {String(module.type).replace(/^./, letter => letter.toUpperCase())}</div><p className="mt-2 text-[11px] leading-relaxed text-stone-500">Esta seção faz parte da estrutura modular desta ficha.</p></div></div>; })}</div></section>
+            <div className="mt-8 flex items-start gap-3 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] p-4"><ShieldCheck size={17} className="mt-0.5 text-emerald-400" /><p className="text-xs leading-relaxed text-stone-400">Esta é uma ficha de leitura. Conteúdos personalizados, quando houver, são identificados pelo autor no construtor.</p></div>
+          </div>
+        </article>
+      </div>
+    </main>
+  );
+}
+
+function ShikigamiReadCard({ sheet }: { sheet: Record<string, unknown> }) {
+  const attributes = asRecord(sheet.attributes) ?? {};
+  const grade = typeof sheet.grade === "string" && sheet.grade in INVOCATION_GRADE_RULES ? sheet.grade as InvocationGrade : null;
+  const userLevel = Math.max(1, Number(sheet.userLevel ?? 1));
+  const proficiencyBonus = Math.max(0, Number(sheet.proficiencyBonus ?? 2));
+  const stats = grade ? calculateInvocationStats(grade, Number(attributes.constituicao ?? 0), Number(attributes.destreza ?? 0), userLevel, proficiencyBonus) : null;
+  const abilities = Array.isArray(sheet.abilities) ? sheet.abilities.map(asRecord).filter((ability): ability is Record<string, unknown> => Boolean(ability)) : [];
+  const statEntries = stats ? [["Custo", `${stats.cost} PE`], ["Pontos", stats.attributePoints], ["Limite", stats.attributeCap], ["Vida", stats.health], ["Defesa", stats.defense]] : [];
+
+  return <section className="mt-7 rounded-2xl border border-rose-300/12 bg-rose-500/[0.035] p-5"><div className="flex items-center gap-2"><Flame size={16} className="text-rose-300" /><div><p className="text-sm font-semibold text-stone-100">{String(sheet.name || "Shikigami")}</p><p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-stone-500">Ficha estruturada · {grade ? `${grade} grau` : "grau não definido"}</p></div></div>{statEntries.length > 0 && <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">{statEntries.map(([label, value]) => <div key={String(label)} className="rounded-lg border border-white/8 bg-black/10 p-2 text-center"><p className="text-sm font-semibold text-rose-100">{String(value)}</p><p className="mt-1 text-[9px] uppercase text-stone-500">{String(label)}</p></div>)}</div>}<div className="mt-4"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-500">Atributos</p><div className="mt-2 flex flex-wrap gap-2">{Object.entries(attributes).map(([attribute, value]) => <span key={attribute} className="rounded-md border border-white/8 bg-black/10 px-2 py-1 text-[10px] text-stone-300">{attribute}: <strong className="text-rose-100">{String(value)}</strong></span>)}</div></div>{abilities.length > 0 && <div className="mt-4"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-500">Habilidades</p><div className="mt-2 space-y-2">{abilities.map((ability, index) => <div key={String(ability.id ?? index)} className="rounded-lg border border-white/8 bg-black/10 p-3"><p className="text-xs font-semibold text-stone-200">{String(ability.name || `Habilidade ${index + 1}`)}</p>{typeof ability.description === "string" && ability.description.trim() && <p className="mt-1 text-[11px] leading-relaxed text-stone-400">{ability.description}</p>}</div>)}</div></div>}</section>;
 }

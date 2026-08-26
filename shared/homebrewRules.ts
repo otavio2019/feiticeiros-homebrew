@@ -72,6 +72,8 @@ export const INVOCATION_GRADE_RULES = {
 } as const;
 
 export type InvocationGrade = keyof typeof INVOCATION_GRADE_RULES;
+export const INVOCATION_ATTRIBUTES = ["forca", "destreza", "constituicao", "inteligencia", "presenca"] as const;
+export type InvocationAttribute = (typeof INVOCATION_ATTRIBUTES)[number];
 
 export function calculateInvocationStats(
   grade: InvocationGrade,
@@ -90,12 +92,34 @@ export function calculateInvocationStats(
   };
 }
 
+export function validateInvocationSheet(
+  grade: InvocationGrade,
+  attributes: Partial<Record<InvocationAttribute, number>>,
+  manualMode = false,
+) {
+  const rule = INVOCATION_GRADE_RULES[grade];
+  const values = INVOCATION_ATTRIBUTES.map(attribute => Math.max(0, Number(attributes[attribute] ?? 0)));
+  const allocatedPoints = values.reduce((total, value) => total + value, 0);
+  const withinAttributeCap = values.every(value => value <= rule.attributeCap);
+  return {
+    allocatedPoints,
+    pointBudget: rule.points,
+    attributeCap: rule.attributeCap,
+    withinPointBudget: manualMode || allocatedPoints <= rule.points,
+    withinAttributeCap: manualMode || withinAttributeCap,
+  };
+}
+
 export type HomebrewValidationItem = {
   key: string;
   label: string;
   valid: boolean;
   message: string;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
 
 export function buildHomebrewValidation(
   title: string,
@@ -130,6 +154,22 @@ export function buildHomebrewValidation(
       { key: "vow-duration", label: "Duração do voto", valid: duration === "temporario" || duration === "permanente", message: "Escolha uma duração para o voto." },
       { key: "vow-weight", label: "Peso do voto", valid: ["leve", "medio", "pesado", "extremo"].includes(weight) && isVowCombinationAllowed(duration, weight), message: "Revise a combinação entre duração e peso." },
       { key: "vow-trade", label: "Contrapartida", valid: String(data.vowTrade ?? "").trim().length >= 12, message: "Descreva benefício e malefício do voto." },
+    );
+  }
+
+  if (module === "shikigami") {
+    const sheet = isRecord(data.shikigami) ? data.shikigami : {};
+    const grade = String(sheet.grade ?? "") as InvocationGrade;
+    const isKnownGrade = grade in INVOCATION_GRADE_RULES;
+    const attributes = isRecord(sheet.attributes) ? sheet.attributes as Partial<Record<InvocationAttribute, number>> : {};
+    const validation = isKnownGrade
+      ? validateInvocationSheet(grade, attributes, manualMode)
+      : null;
+    base.push(
+      { key: "shikigami-name", label: "Nome do Shikigami", valid: String(sheet.name ?? "").trim().length >= 3, message: "Informe um nome para o Shikigami." },
+      { key: "shikigami-grade", label: "Grau", valid: isKnownGrade, message: "Escolha um grau de invocação válido." },
+      { key: "shikigami-points", label: "Pontos de atributo", valid: Boolean(validation?.withinPointBudget), message: "A distribuição excede os pontos previstos para este grau." },
+      { key: "shikigami-cap", label: "Limite por atributo", valid: Boolean(validation?.withinAttributeCap), message: "Um atributo excede o limite previsto para este grau." },
     );
   }
 

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
+import { ShikigamiConfiguration } from "@/components/ShikigamiConfiguration";
 import { buildHomebrewValidation, HOME_BREW_MODULE_LABELS, HOME_BREW_MODULES, SPELL_COST_BY_LEVEL, type HomebrewModuleType } from "@shared/homebrewRules";
 import {
   Archive,
@@ -506,7 +507,7 @@ export default function Home() {
 
                       {activeModule === "tecnicas" && <TechniqueConfiguration manualMode={manualMode} onManualMode={setManualMode} data={draftData} onData={setDraftData} />}
                       {activeModule === "votos" && <VowConfiguration manualMode={manualMode} onManualMode={setManualMode} data={draftData} onData={setDraftData} />}
-                      {activeModule === "shikigami" && <InvocationConfiguration />}
+                      {activeModule === "shikigami" && <ShikigamiConfiguration manualMode={manualMode} onManualMode={setManualMode} data={draftData} onData={setDraftData} />}
                       {!["tecnicas", "votos", "shikigami"].includes(activeModule) && <GenericConfiguration module={activeModule} manualMode={manualMode} onManualMode={setManualMode} />}
                       {manualMode && <ManualNotes value={String(draftData.manualNotes ?? "")} customFields={Array.isArray(draftData.customFields) ? draftData.customFields.map(String) : []} onChange={value => setDraftData(current => ({ ...current, manualNotes: value, containsCustomContent: true }))} onFieldsChange={fields => setDraftData(current => ({ ...current, customFields: fields, containsCustomContent: true }))} />}
                       <ValidationPanel items={validationItems} />

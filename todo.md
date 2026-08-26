@@ -38,3 +38,11 @@
 - [x] Executar validação final de produção e sincronizar a versão validada no GitHub.
 - [x] Consolidar no motor de regras as fórmulas e validações estruturadas de Técnica, Voto e Invocação.
 - [x] Commitar as alterações validadas, fazer push para main e confirmar o conteúdo no repositório público.
+
+- [ ] Escolher o provedor externo e preparar a configuração de deploy pelo GitHub.
+- [ ] Configurar banco e secrets obrigatórios sem expor credenciais.
+- [ ] Executar o deploy externo e validar health check, autenticação e frontend.
+- [ ] Registrar no README o provedor, comandos e URL final do deploy externo.
+- [x] Implementar construtor estruturado de Shikigamis com grau, atributos, pontos, defesa, vida e habilidades.
+- [x] Validar regras verificáveis de Shikigami e manter o modo manual para exceções.
+- [x] Exibir a ficha estruturada de Shikigami na leitura compartilhável.

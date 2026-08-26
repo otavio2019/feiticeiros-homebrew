@@ -3,6 +3,7 @@ import {
   calculateAttributeModifier,
   buildHomebrewValidation,
   calculateInvocationStats,
+  validateInvocationSheet,
   getSpellCost,
   isTechniqueCostAllowed,
   calculateTechniqueDifficulty,
@@ -44,6 +45,18 @@ describe("regras estruturadas de Homebrew", () => {
     });
   });
 
+  it("valida a distribuição estruturada de atributos do Shikigami", () => {
+    const allowed = validateInvocationSheet("quarto", { forca: 4, destreza: 3, constituicao: 3 });
+    expect(allowed.allocatedPoints).toBe(10);
+    expect(allowed.withinPointBudget).toBe(true);
+    expect(allowed.withinAttributeCap).toBe(true);
+
+    const invalid = validateInvocationSheet("quarto", { forca: 17, destreza: 4 });
+    expect(invalid.withinPointBudget).toBe(false);
+    expect(invalid.withinAttributeCap).toBe(false);
+    expect(validateInvocationSheet("quarto", { forca: 17, destreza: 4 }, true).withinPointBudget).toBe(true);
+  });
+
   it("gera pendências contextuais para os campos essenciais do construtor", () => {
     const pending = buildHomebrewValidation("A", "", "tecnicas", true, {});
     expect(pending.filter(item => !item.valid)).toHaveLength(6);
@@ -74,5 +87,11 @@ describe("regras estruturadas de Homebrew", () => {
       vowTrade: "Recebo uma vantagem em troca de uma limitação detalhada.",
     });
     expect(vow.find(item => item.key === "vow-weight")?.valid).toBe(false);
+
+    const shikigami = buildHomebrewValidation("Shikigami", "Resumo", "shikigami", false, {
+      shikigamiNarrative: "Invocação de suporte com atributos e habilidades estruturadas.",
+      shikigami: { name: "Kuro", grade: "quarto", attributes: { forca: 5, destreza: 3, constituicao: 2 } },
+    });
+    expect(shikigami.every(item => item.valid)).toBe(true);
   });
 });

@@ -2,6 +2,12 @@
 
 O Homebrew Forge é uma aplicação web para criar, organizar, validar e compartilhar conteúdo personalizado de **Feiticeiros & Maldições**. O projeto preserva o construtor modular existente, a biblioteca de Homebrews, o modo manual avançado, as validações contextuais, a leitura pública por link compartilhável e o upload opcional de imagens.
 
+## Construtor de Shikigami
+
+O módulo **Shikigami & Invocações** possui uma ficha estruturada. O criador escolhe o grau, informa o nome, nível do usuário, bônus de proficiência e distribui atributos. A aplicação calcula custo em PE, orçamento de pontos, limite por atributo, vida e defesa a partir das regras mapeadas no projeto. Habilidades também são registradas como itens estruturados, com nome e descrição, e não apenas como um bloco de texto.
+
+O modo manual continua disponível para campanhas que usem exceções. Quando habilitado, a ficha permite ultrapassar os limites automáticos, mantendo a exceção identificada na Homebrew e na leitura compartilhável.
+
 ## Stack
 
 A aplicação usa React 19, Vite 7, Express 4, tRPC 11, Drizzle ORM, MySQL, Cloudinary, Nodemailer e Vitest. A autenticação é local: usuários são armazenados no banco, senhas usam `scrypt` do Node.js e as sessões são tokens aleatórios persistidos apenas em forma de hash.
@@ -76,6 +82,7 @@ Os testes cobrem autenticação de logout, hashing de senha, regras de Homebrew 
 | Caminho | Responsabilidade |
 |---|---|
 | `client/src/pages/Home.tsx` | Biblioteca e construtor modular. |
+| `client/src/components/ShikigamiConfiguration.tsx` | Ficha estruturada e calculada de Shikigami. |
 | `client/src/pages/Login.tsx` | Login e cadastro locais. |
 | `server/routers.ts` | Contratos tRPC de autenticação e Homebrew. |
 | `server/_core/sdk.ts` | Sessões locais persistentes. |
