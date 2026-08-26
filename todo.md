@@ -64,3 +64,4 @@
 - [ ] Rotacionar a credencial TiDB e cadastrar a nova DATABASE_URL no ambiente de produção da Vercel sem expor seu valor.
 - [ ] Validar em navegador os modos de recuperação e redefinição de senha, inclusive as transições de interface e os estados de erro.
 - [ ] Atualizar README e documentação de ambiente para npm, Vercel e TiDB, removendo instruções conflitantes de pnpm e Railway.
+- [ ] Substituir erros técnicos de validação de token por mensagem compreensível no fluxo público de redefinição de senha.

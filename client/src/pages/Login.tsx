@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getAuthErrorMessage } from "@/lib/authError";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -44,7 +45,7 @@ export default function Login() {
       await utils.auth.me.invalidate();
       navigate("/");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Não foi possível autenticar.");
+      setError(getAuthErrorMessage(cause, recoveryMode));
     }
   }
 
