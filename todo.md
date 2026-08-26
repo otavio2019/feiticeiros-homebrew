@@ -27,5 +27,5 @@
 - [x] Confirmar o repositório Git remoto e o branch de destino para a versão validada.
 - [ ] Enviar a versão validada do Homebrew Forge ao repositório Git remoto.
 - [ ] Confirmar e aplicar visibilidade pública ao site publicado do Homebrew Forge.
-- [ ] Criar um repositório GitHub público para o Homebrew Forge após a autorização da conta.
-- [ ] Verificar a sessão do GitHub conectada e publicar o branch main do projeto.
+- [x] Criar um repositório GitHub público para o Homebrew Forge após a autorização da conta.
+- [x] Verificar a sessão do GitHub conectada e publicar o branch main do projeto.
