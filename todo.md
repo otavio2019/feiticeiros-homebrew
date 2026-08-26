@@ -1,0 +1,26 @@
+# Project TODO
+
+- [x] Mapear os elementos e restrições utilizáveis dos livros enviados, sem apresentar regras não verificadas como oficiais.
+- [x] Completar o mapeamento verificável de armas, equipamentos, aptidões, especializações e mecânicas complementares relevantes para os módulos planejados.
+- [x] Diferenciar explicitamente no mapa de regras o conteúdo oficial, o opcional e o manual/personalizado.
+- [x] Confirmar no arquivo de referência o complemento do mapeamento de armas, equipamentos, aptidões, especializações e mecânicas complementares.
+- [x] Confirmar no arquivo de referência a marcação de conteúdo oficial, opcional e manual/personalizado.
+- [x] Criar o modelo de dados para Homebrews, módulos, elementos estruturados, imagens opcionais, visibilidade e compartilhamento.
+- [x] Implementar biblioteca pessoal com pesquisa, filtros, criação, edição, duplicação e exclusão de Homebrews.
+- [x] Implementar o fluxo de criação modular, com seleção de módulos antes do editor.
+- [x] Criar seções estruturadas para Origem, Votos/Restrições, Técnicas, Armas, Shikigami, Mecânicas, Aptidões e Especializações.
+- [x] Criar o modo manual avançado, identificando conteúdos e valores personalizados.
+- [x] Implementar validação contextual básica de campos obrigatórios e indicadores de consistência.
+- [x] Persistir e confirmar a UI do construtor modular e suas rotas associadas.
+- [x] Conectar o modo manual à interface e aos dados salvos, identificando valores personalizados na ficha compartilhável.
+- [x] Integrar validações contextuais aos dados salvos do formulário, com estados visíveis de pendência ou consistência.
+- [x] Permitir imagens opcionais por URL e upload, incluindo capa e imagens por seção.
+- [x] Criar pré-visualização em formato de ficha de Homebrew.
+- [x] Criar página pública de leitura e link compartilhável por Homebrew.
+- [x] Implementar interface responsiva, escura e elegante, com biblioteca, navegação lateral e construtor por etapas.
+- [x] Criar e executar testes Vitest para regras de validação e fluxos de dados da Homebrew.
+- [x] Duplicar dados, módulos, elementos, imagens e capa junto com a Homebrew de origem.
+- [x] Persistir validações de campos de técnica e voto, refletindo pendências reais na interface.
+- [x] Usar o identificador de compartilhamento real da Homebrew ativa nos controles de copiar e abrir leitura.
+- [x] Marcar na ficha compartilhável quais campos ou valores foram personalizados no modo manual.
+- [x] Persistir e validar campos específicos de Técnica e Voto, refletindo as pendências reais no construtor.

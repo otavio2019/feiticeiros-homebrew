@@ -1,17 +1,18 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import {
+  boolean,
+  index,
+  int,
+  json,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/mysql-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -22,7 +23,109 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+export const homebrewVisibility = mysqlEnum("homebrewVisibility", ["private", "unlisted", "public"]);
+export const homebrewStatus = mysqlEnum("homebrewStatus", ["draft", "published"]);
+export const homebrewModuleType = mysqlEnum("homebrewModuleType", [
+  "origem",
+  "votos",
+  "tecnicas",
+  "armas",
+  "shikigami",
+  "mecanicas",
+  "aptidoes",
+  "especializacoes",
+  "outros",
+]);
+export const homebrewElementType = mysqlEnum("homebrewElementType", [
+  "origem",
+  "voto",
+  "tecnica",
+  "feitico",
+  "arma",
+  "shikigami",
+  "mecanica",
+  "aptidao",
+  "especializacao",
+  "outro",
+]);
+export const imageSource = mysqlEnum("imageSource", ["url", "upload"]);
+
+export const homebrews = mysqlTable(
+  "homebrews",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    ownerId: int("ownerId").notNull().references(() => users.id),
+    title: varchar("title", { length: 160 }).notNull(),
+    summary: text("summary").notNull(),
+    shareId: varchar("shareId", { length: 32 }).notNull(),
+    visibility: homebrewVisibility.notNull().default("private"),
+    status: homebrewStatus.notNull().default("draft"),
+    characterLevel: int("characterLevel").notNull().default(1),
+    manualMode: boolean("manualMode").notNull().default(false),
+    coverImageUrl: text("coverImageUrl"),
+    data: json("data").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("homebrews_share_id_unique").on(table.shareId),
+    index("homebrews_owner_updated_idx").on(table.ownerId, table.updatedAt),
+  ],
+);
+
+export const homebrewModules = mysqlTable(
+  "homebrewModules",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    homebrewId: int("homebrewId").notNull().references(() => homebrews.id),
+    type: homebrewModuleType.notNull(),
+    position: int("position").notNull().default(0),
+    enabled: boolean("enabled").notNull().default(true),
+    data: json("data").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("homebrew_modules_homebrew_position_idx").on(table.homebrewId, table.position)],
+);
+
+export const homebrewElements = mysqlTable(
+  "homebrewElements",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    homebrewId: int("homebrewId").notNull().references(() => homebrews.id),
+    moduleId: int("moduleId").notNull().references(() => homebrewModules.id),
+    parentElementId: int("parentElementId"),
+    type: homebrewElementType.notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    position: int("position").notNull().default(0),
+    isManual: boolean("isManual").notNull().default(false),
+    data: json("data").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("homebrew_elements_module_position_idx").on(table.moduleId, table.position),
+    index("homebrew_elements_homebrew_type_idx").on(table.homebrewId, table.type),
+  ],
+);
+
+export const homebrewImages = mysqlTable(
+  "homebrewImages",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    homebrewId: int("homebrewId").notNull().references(() => homebrews.id),
+    moduleId: int("moduleId"),
+    elementId: int("elementId"),
+    source: imageSource.notNull(),
+    url: text("url").notNull(),
+    storageKey: varchar("storageKey", { length: 255 }),
+    altText: varchar("altText", { length: 240 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("homebrew_images_homebrew_idx").on(table.homebrewId)],
+);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
-
-// TODO: Add your tables here
+export type Homebrew = typeof homebrews.$inferSelect;
+export type InsertHomebrew = typeof homebrews.$inferInsert;
