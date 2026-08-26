@@ -42,7 +42,25 @@
 - [x] Escolher o provedor externo e preparar a configuração de deploy pelo GitHub.
 - [ ] Configurar banco e secrets obrigatórios sem expor credenciais.
 - [ ] Executar o deploy externo e validar health check, autenticação e frontend.
-- [ ] Registrar no README o provedor, comandos e URL final do deploy externo.
+- [x] Registrar no README o provedor, comandos e URL final do deploy externo.
 - [x] Implementar construtor estruturado de Shikigamis com grau, atributos, pontos, defesa, vida e habilidades.
 - [x] Validar regras verificáveis de Shikigami e manter o modo manual para exceções.
 - [x] Exibir a ficha estruturada de Shikigami na leitura compartilhável.
+- [ ] Gerar migrations Drizzle versionadas e executar o schema idempotente no MySQL Railway.
+- [ ] Auditar runtime, rotas, sessões, banco, uploads, SMTP, regras Homebrew e resíduos Manus sem alterar o projeto.
+- [x] Definir e implementar o adaptador serverless tRPC/Express compatível com Vercel.
+- [ ] Configurar build, roteamento SPA, cookies HTTPS, migrations e variáveis de ambiente para Vercel.
+- [ ] Validar instalação, TypeScript, build, rotas, banco, autenticação, Cloudinary e SMTP antes do deploy.
+- [ ] Publicar o projeto na URL Vercel desejada e confirmar o funcionamento externo.
+- [ ] Desativar os serviços Railway somente após a publicação Vercel ser confirmada pelo usuário.
+- [ ] Criar e configurar o cluster TiDB Cloud como MySQL externo do projeto Vercel.
+- [x] Aplicar migrations no TiDB Cloud e verificar a conexão Drizzle com TLS.
+- [ ] Remover a configuração e a documentação Railway após a publicação Vercel confirmada.
+- [ ] Corrigir e validar a interface de recuperação e redefinição de senha.
+- [x] Validar a resposta HTTP real da Function tRPC de health check.
+- [ ] Consolidar o gerenciamento de dependências para instalação npm na Vercel.
+- [ ] Importar o repositório público na Vercel e configurar os ambientes sem expor segredos.
+- [ ] Validar o deploy público, as rotas SPA e a sessão HTTPS na URL desejada.
+- [ ] Rotacionar a credencial TiDB e cadastrar a nova DATABASE_URL no ambiente de produção da Vercel sem expor seu valor.
+- [ ] Validar em navegador os modos de recuperação e redefinição de senha, inclusive as transições de interface e os estados de erro.
+- [ ] Atualizar README e documentação de ambiente para npm, Vercel e TiDB, removendo instruções conflitantes de pnpm e Railway.

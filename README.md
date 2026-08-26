@@ -1,81 +1,93 @@
 # Feiticeiros & Maldições — Homebrew Forge
 
-O Homebrew Forge é uma aplicação web para criar, organizar, validar e compartilhar conteúdo personalizado de **Feiticeiros & Maldições**. O projeto preserva o construtor modular existente, a biblioteca de Homebrews, o modo manual avançado, as validações contextuais, a leitura pública por link compartilhável e o upload opcional de imagens.
+O Homebrew Forge é uma aplicação web para criar, organizar, validar e compartilhar conteúdo personalizado de **Feiticeiros & Maldições**. O projeto preserva o construtor modular, a biblioteca de Homebrews, o modo manual avançado, as validações contextuais, a leitura pública por link compartilhável e as imagens opcionais por URL ou Cloudinary.
 
 ## Construtor de Shikigami
 
-O módulo **Shikigami & Invocações** possui uma ficha estruturada. O criador escolhe o grau, informa o nome, nível do usuário, bônus de proficiência e distribui atributos. A aplicação calcula custo em PE, orçamento de pontos, limite por atributo, vida e defesa a partir das regras mapeadas no projeto. Habilidades também são registradas como itens estruturados, com nome e descrição, e não apenas como um bloco de texto.
+O módulo **Shikigami & Invocações** possui ficha estruturada. O criador escolhe grau, nome, nível do usuário e bônus de proficiência, distribui atributos e registra habilidades. A aplicação calcula custo em PE, orçamento de pontos, limite por atributo, vida e defesa conforme as regras mapeadas no projeto.
 
-O modo manual continua disponível para campanhas que usem exceções. Quando habilitado, a ficha permite ultrapassar os limites automáticos, mantendo a exceção identificada na Homebrew e na leitura compartilhável.
+O modo manual continua disponível para campanhas com exceções. Quando habilitado, permite ultrapassar limites automáticos, mantendo a exceção identificada na Homebrew e em sua leitura compartilhável.
 
-## Stack
+## Arquitetura e deploy
 
-A aplicação usa React 19, Vite 7, Express 4, tRPC 11, Drizzle ORM, MySQL, Cloudinary, Nodemailer e Vitest. A autenticação é local: usuários são armazenados no banco, senhas usam `scrypt` do Node.js e as sessões são tokens aleatórios persistidos apenas em forma de hash.
+A aplicação usa React 19, Vite 7, Express 4, tRPC 11, Drizzle ORM, TiDB Cloud compatível com MySQL, Cloudinary, Nodemailer e Vitest. A interface estática é construída pelo Vite e o backend é uma **Function Node da Vercel** em `api/trpc/[...trpc].ts`; essa Function reutiliza `server/app.ts` e nunca executa `server.listen()`.
+
+O deploy de produção é disponibilizado em [https://feiticeiros-homebrew.vercel.app](https://feiticeiros-homebrew.vercel.app). O frontend e a API usam o mesmo domínio, permitindo que cookies de sessão `HttpOnly`, `SameSite=Lax` e `Secure` funcionem sem configuração de CORS adicional.
+
+> O Railway permanece apenas como contingência durante a transição. Não deve ser removido ou desligado até que a validação na Vercel seja concluída e autorizada explicitamente pelo proprietário.
 
 ## Requisitos
 
-É necessário Node.js 20 ou superior, pnpm 10 ou compatível, um banco MySQL/MariaDB acessível pela aplicação, uma conta Cloudinary para imagens e um servidor SMTP para recuperação de senha quando esse fluxo for habilitado pela interface.
+É necessário Node.js 20 ou superior, npm 10 ou compatível, uma instância TiDB Cloud ou MySQL acessível, uma conta Cloudinary para uploads e um servidor SMTP para recuperação de senha.
 
-## Instalação local
+## Instalação e validação local
 
 ```bash
-pnpm install
-cp .env.example .env
-pnpm check
-pnpm test
-pnpm build
-pnpm start
+npm install
+npm run check
+npm test
+npm run build
+npm run dev
 ```
 
-O servidor lê `PORT` do ambiente e serve o frontend compilado a partir de `dist/public`. Em desenvolvimento, use `pnpm dev`.
+Para executar o servidor Node persistente fora da Vercel, use `npm start` após o build. A Vercel não usa esse comando: ela publica `dist/public` e executa a Function tRPC sob demanda.
 
 ## Variáveis de ambiente
 
-| Variável | Obrigatória | Uso |
-|---|---:|---|
-| `DATABASE_URL` | Sim | URL de conexão MySQL/MariaDB usada pelo Drizzle. |
-| `SESSION_SECRET` | Sim | Segredo auxiliar da aplicação; mantenha privado e aleatório. |
-| `CLOUDINARY_CLOUD_NAME` | Sim para uploads | Nome do cloud Cloudinary. |
-| `CLOUDINARY_API_KEY` | Sim para uploads | Chave de API do Cloudinary. |
-| `CLOUDINARY_API_SECRET` | Sim para uploads | Segredo de API do Cloudinary. |
-| `SMTP_HOST` | Para e-mail | Host SMTP para recuperação de senha. |
-| `SMTP_PORT` | Para e-mail | Porta SMTP, normalmente `587` ou `465`. |
-| `SMTP_USER` | Para e-mail | Usuário SMTP. |
-| `SMTP_PASSWORD` | Para e-mail | Senha SMTP. |
-| `SMTP_FROM` | Para e-mail | Remetente exibido nas mensagens. |
-| `OWNER_OPEN_ID` | Opcional | Identificador legado usado apenas para preservar a promoção do proprietário a administrador. |
-| `NODE_ENV` | Não | Use `production` no servidor publicado. |
-| `PORT` | Não | Porta fornecida pelo host; não fixe esse valor no código. |
+| Variável | Obrigatória | Onde usar | Finalidade |
+|---|---:|---|---|
+| `DATABASE_URL` | Sim | Vercel/servidor | URL MySQL de TiDB Cloud com o banco `homebrew_forge`. A conexão deve usar TLS. |
+| `SESSION_SECRET` | Sim | Vercel/servidor | Segredo aleatório privado usado no HMAC dos tokens de sessão. |
+| `APP_URL` | Sim para reset | Vercel/servidor | URL pública canônica, por exemplo `https://feiticeiros-homebrew.vercel.app`, usada nos links de recuperação. |
+| `CLOUDINARY_CLOUD_NAME` | Sim para upload | Vercel/servidor | Identificador do cloud Cloudinary. |
+| `CLOUDINARY_API_KEY` | Sim para upload | Vercel/servidor | Chave de API Cloudinary. |
+| `CLOUDINARY_API_SECRET` | Sim para upload | Vercel/servidor | Segredo de API Cloudinary; nunca deve chegar ao navegador. |
+| `SMTP_HOST` | Sim para reset por e-mail | Vercel/servidor | Host do provedor SMTP. |
+| `SMTP_PORT` | Sim para reset por e-mail | Vercel/servidor | Porta SMTP, normalmente `587` ou `465`. |
+| `SMTP_USER` | Sim para reset por e-mail | Vercel/servidor | Usuário SMTP. |
+| `SMTP_PASSWORD` | Sim para reset por e-mail | Vercel/servidor | Senha ou token de aplicativo SMTP. |
+| `SMTP_FROM` | Sim para reset por e-mail | Vercel/servidor | Remetente apresentado nas mensagens. |
+| `OWNER_OPEN_ID` | Não | Vercel/servidor | Compatibilidade para promover o proprietário a administrador quando aplicável. |
+| `NODE_ENV` | Não | Servidor Node persistente | Use `production` fora da Vercel; a plataforma já define esse contexto na Function. |
+| `PORT` | Não | Servidor Node persistente | Porta fornecida pelo host; a aplicação não fixa esse valor. |
 
-Nunca versionar `.env` ou credenciais. O arquivo [`docs/environment.md`](docs/environment.md) contém um modelo expandido do contrato de ambiente.
+Não versione `.env`, URLs de banco, chaves, tokens ou senhas. O arquivo [`docs/environment.md`](docs/environment.md) detalha o contrato operacional.
 
-## Banco de dados
+## Banco de dados e TiDB Cloud
 
-O schema está em `drizzle/schema.ts`. Para gerar e aplicar migrações em um ambiente controlado, use o fluxo do Drizzle configurado no projeto:
+O schema está em `drizzle/schema.ts`; as migrations versionadas estão em `drizzle/`. Como TiDB Cloud exige TLS, as migrations devem reutilizar o pool seguro da aplicação:
 
 ```bash
-pnpm db:push
+npm run db:generate
+npm run db:migrate
+npm run db:verify
 ```
 
-Antes de aplicar mudanças em produção, faça backup do banco e revise o SQL gerado. A aplicação não cria dados de demonstração automaticamente.
+`db:migrate` aplica as migrations existentes e `db:verify` confirma conexão TLS e a presença das tabelas essenciais. Execute ambos com `DATABASE_URL` definido em ambiente seguro. Antes de alterações estruturais futuras, revise o SQL gerado e faça backup apropriado.
 
-## Deploy no Railway
+## Configuração na Vercel
 
-Crie um serviço a partir do repositório GitHub, configure as variáveis da seção anterior e use os comandos padrão do projeto. O build deve executar `pnpm install --frozen-lockfile && pnpm build`; o start deve executar `pnpm start`. Configure o banco MySQL/MariaDB como serviço ou forneça uma conexão gerenciada em `DATABASE_URL`. Depois do primeiro deploy, aplique as migrações do banco a partir de um ambiente administrativo seguro.
+O arquivo `vercel.json` estabelece `npm install`, executa `npm run build:client`, serve `dist/public`, mantém a Function tRPC em `api/trpc/[...trpc].ts` e limita o fallback para `index.html` às rotas que não começam por `/api/`. Portanto, links profundos como `/login` e `/s/:shareId` continuam abrindo a SPA sem interceptar a API.
 
-## Deploy no Render
+Cadastre todas as variáveis obrigatórias no ambiente **Production** da Vercel. Para prévias de pull requests que precisem de banco e autenticação, registre valores independentes também em **Preview**. Nunca use variáveis `VITE_*` para segredos.
 
-Crie um **Web Service** conectado ao repositório, selecione um ambiente Node e configure `pnpm install --frozen-lockfile && pnpm build` como build command e `pnpm start` como start command. Cadastre as mesmas variáveis de ambiente e use um banco MySQL/MariaDB externo compatível. O Render fornece a porta pelo ambiente; por isso o projeto usa `PORT` e não depende de uma porta fixa.
+O health check público requer a entrada tRPC de `timestamp`:
+
+```text
+GET /api/trpc/system.health?input={"json":{"timestamp":0}}
+```
+
+O retorno esperado é o envelope JSON tRPC com `{ "ok": true }`.
 
 ## Testes e qualidade
 
 ```bash
-pnpm check
-pnpm test
-pnpm build
+npm run check
+npm test
+npm run build
 ```
 
-Os testes cobrem autenticação de logout, hashing de senha, regras de Homebrew e fluxos de dados do construtor. O build pode emitir um aviso sobre tamanho do bundle do frontend, mas deve terminar com sucesso.
+Os testes cobrem regras do construtor, autenticação local, logout, recuperação de senha, configuração TiDB/TLS e o endpoint HTTP tRPC de health. O build pode avisar sobre o tamanho do bundle inicial, mas deve terminar com sucesso.
 
 ## Estrutura principal
 
@@ -83,9 +95,11 @@ Os testes cobrem autenticação de logout, hashing de senha, regras de Homebrew 
 |---|---|
 | `client/src/pages/Home.tsx` | Biblioteca e construtor modular. |
 | `client/src/components/ShikigamiConfiguration.tsx` | Ficha estruturada e calculada de Shikigami. |
-| `client/src/pages/Login.tsx` | Login e cadastro locais. |
+| `client/src/pages/Login.tsx` | Login, cadastro, recuperação e redefinição de senha. |
+| `api/trpc/[...trpc].ts` | Entrada serverless da Function Node Vercel. |
+| `server/app.ts` | Fábrica Express reutilizada localmente e na Vercel. |
 | `server/routers.ts` | Contratos tRPC de autenticação e Homebrew. |
-| `server/_core/sdk.ts` | Sessões locais persistentes. |
+| `server/_core/sdk.ts` | Sessões locais persistentes com HMAC. |
 | `server/storage.ts` | Upload, URL e exclusão de imagens no Cloudinary. |
 | `drizzle/schema.ts` | Schema MySQL, usuários, sessões e conteúdo. |
 | `server/*.test.ts` | Testes automatizados. |

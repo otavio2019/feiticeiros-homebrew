@@ -1,6 +1,7 @@
 export const ENV = {
   databaseUrl: process.env.DATABASE_URL ?? "",
   cookieSecret: process.env.SESSION_SECRET ?? process.env.JWT_SECRET ?? "",
+  appUrl: process.env.APP_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME ?? "",

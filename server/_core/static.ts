@@ -5,7 +5,7 @@ import path from "node:path";
 export function serveStatic(app: Express) {
   const distPath = path.resolve(import.meta.dirname, "public");
   if (!fs.existsSync(distPath)) {
-    console.error(`Diretório de build não encontrado. Execute pnpm build antes de iniciar em produção.`);
+    console.error(`Diretório de build não encontrado. Execute npm run build antes de iniciar em produção.`);
   }
 
   app.use(express.static(distPath));

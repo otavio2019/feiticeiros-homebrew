@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
 import type { User } from "../../drizzle/schema";
@@ -8,8 +8,17 @@ import { ForbiddenError } from "@shared/_core/errors";
 
 const SESSION_TTL_MS = ONE_YEAR_MS;
 
+function getSessionSecret() {
+  const secret = process.env.SESSION_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET é obrigatório em produção.");
+  }
+  return "homebrew-forge-development-session-secret";
+}
+
 function hashToken(token: string) {
-  return createHash("sha256").update(token).digest("hex");
+  return createHmac("sha256", getSessionSecret()).update(token).digest("hex");
 }
 
 function readSessionToken(req: Request) {

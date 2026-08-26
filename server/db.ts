@@ -1,5 +1,6 @@
-import { and, desc, eq, gt, like, ne, or } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, like, ne, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { createPool, type Pool } from "mysql2/promise";
 import {
   authSessions,
   homebrewElements,
@@ -8,17 +9,22 @@ import {
   Homebrew,
   homebrews,
   InsertUser,
+  passwordResetTokens,
   users,
 } from "../drizzle/schema";
 import type { HomebrewModuleType } from "../shared/homebrewRules";
 import { ENV } from "./_core/env";
+import { getMySqlPoolOptions } from "./database";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _pool: Pool | null = null;
+type Database = ReturnType<typeof drizzle<Record<string, never>, Pool>>;
+let _db: Database | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _pool = createPool(getMySqlPoolOptions(process.env.DATABASE_URL));
+      _db = drizzle(_pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -97,6 +103,40 @@ export async function deleteAuthSession(tokenHash: string) {
   const database = await getDb();
   if (!database) return;
   await database.delete(authSessions).where(eq(authSessions.tokenHash, tokenHash));
+}
+
+export async function createPasswordResetToken(userId: number, tokenHash: string, expiresAt: Date) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  await database.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+  await database.insert(passwordResetTokens).values({ userId, tokenHash, expiresAt });
+}
+
+export async function consumePasswordResetToken(tokenHash: string) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+
+  return database.transaction(async tx => {
+    const result = await tx
+      .select({ id: passwordResetTokens.id, user: users })
+      .from(passwordResetTokens)
+      .innerJoin(users, eq(passwordResetTokens.userId, users.id))
+      .where(and(eq(passwordResetTokens.tokenHash, tokenHash), gt(passwordResetTokens.expiresAt, new Date()), isNull(passwordResetTokens.usedAt)))
+      .limit(1);
+    const reset = result[0];
+    if (!reset) return undefined;
+    await tx.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, reset.id));
+    return reset.user;
+  });
+}
+
+export async function updateUserPasswordAndInvalidateSessions(userId: number, passwordHash: string) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  await database.transaction(async tx => {
+    await tx.update(users).set({ passwordHash, loginMethod: "password", lastSignedIn: new Date() }).where(eq(users.id, userId));
+    await tx.delete(authSessions).where(eq(authSessions.userId, userId));
+  });
 }
 
 export async function getUserByOpenId(openId: string) {

@@ -3,7 +3,8 @@ import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import * as db from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { hashPassword, verifyPassword } from "./_core/password";
-import { sdk, readSessionToken } from "./_core/sdk";
+import { hashToken, sdk, readSessionToken } from "./_core/sdk";
+import { sendPasswordResetEmail } from "./mail";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { homebrewRouter } from "./routers/homebrews";
@@ -12,6 +13,8 @@ const credentialsSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8).max(128),
 });
+
+const passwordResetTtlMs = 60 * 60 * 1000;
 
 function setSessionCookie(ctx: { req: Parameters<typeof getSessionCookieOptions>[0]; res: { cookie: Function } }, token: string) {
   ctx.res.cookie(COOKIE_NAME, token, { ...getSessionCookieOptions(ctx.req), maxAge: ONE_YEAR_MS });
@@ -42,6 +45,25 @@ export const appRouter = router({
       setSessionCookie(ctx, await sdk.createSession(user.id));
       return user;
     }),
+    requestPasswordReset: publicProcedure
+      .input(z.object({ email: z.string().trim().toLowerCase().email() }))
+      .mutation(async ({ input }) => {
+        const user = await db.getUserByEmail(input.email);
+        // Resposta neutra impede a enumeração de e-mails cadastrados.
+        if (!user) return { success: true } as const;
+        const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+        await db.createPasswordResetToken(user.id, hashToken(token), new Date(Date.now() + passwordResetTtlMs));
+        await sendPasswordResetEmail({ email: input.email, token });
+        return { success: true } as const;
+      }),
+    resetPassword: publicProcedure
+      .input(z.object({ token: z.string().min(32).max(256), password: z.string().min(8).max(128) }))
+      .mutation(async ({ input }) => {
+        const user = await db.consumePasswordResetToken(hashToken(input.token));
+        if (!user) throw new Error("O link de recuperação é inválido ou expirou.");
+        await db.updateUserPasswordAndInvalidateSessions(user.id, await hashPassword(input.password));
+        return { success: true } as const;
+      }),
     logout: publicProcedure.mutation(async ({ ctx }) => {
       await sdk.destroySession(readSessionToken(ctx.req));
       const cookieOptions = getSessionCookieOptions(ctx.req);
