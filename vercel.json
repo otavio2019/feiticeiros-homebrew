@@ -2,10 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "npm install",
-  "buildCommand": "npm run build:client",
+  "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/public",
   "functions": {
-    "api/trpc/[...trpc].ts": {
+    "api/trpc/[...trpc].js": {
       "maxDuration": 30
     }
   },
