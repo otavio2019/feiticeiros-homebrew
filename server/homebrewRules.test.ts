@@ -80,8 +80,9 @@ describe("regras estruturadas de Homebrew", () => {
   });
 
   it("valida coleções mecânicas estendidas sem presumir fórmulas do livro", () => {
-    expect(validateStructuredExtendedMechanics({ costs: [{ resource: "PE", amount: 2, details: "Custo" }], damageProfiles: [{ dice: "2d6", damageType: "energia", details: "Dano" }], ranges: [{ range: 12, unit: "metros" }], conditions: [{ name: "Marcado", effect: "Efeito" }], evolutions: [{ name: "Avanço", description: "Descrição" }] }).valid).toBe(true);
+    expect(validateStructuredExtendedMechanics({ costs: [{ resource: "PE", amount: 2, details: "Custo" }], damageProfiles: [{ dice: "2d6", damageType: "energia", details: "Dano" }], ranges: [{ range: 12, unit: "metros" }], conditions: [{ name: "Marcado", effect: "Efeito" }], vowExchanges: [{ kind: "gain", description: "Maior foco", valueNumber: 1 }, { kind: "loss", description: "Restrição narrada" }], evolutions: [{ name: "Avanço", description: "Descrição" }] }).valid).toBe(true);
     expect(validateStructuredExtendedMechanics({ costs: [{ resource: "", amount: -1, details: "" }], ranges: [{ range: -2, unit: "" }] }).valid).toBe(false);
+    expect(validateStructuredExtendedMechanics({ vowExchanges: [{ kind: "gain", description: "", valueNumber: 1.5 }] }).valid).toBe(false);
     expect(validateStructuredExtendedMechanics({ costs: [{ resource: "", amount: -1, details: "" }] }, true).valid).toBe(true);
   });
 

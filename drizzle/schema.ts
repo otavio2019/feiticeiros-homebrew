@@ -1,4 +1,5 @@
 import {
+  type AnyMySqlColumn,
   boolean,
   index,
   int,
@@ -86,6 +87,10 @@ export const homebrewElementType = mysqlEnum("homebrewElementType", [
   "aptidao",
   "especializacao",
   "outro",
+  "caracteristica",
+  "talento",
+  "evolucao",
+  "propriedade",
 ]);
 export const imageSource = mysqlEnum("imageSource", ["url", "upload"]);
 
@@ -182,6 +187,7 @@ export const homebrewStructuredElements = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     homebrewId: int("homebrewId").notNull().references(() => homebrews.id),
     moduleId: int("moduleId").notNull().references(() => homebrewModules.id),
+    parentElementId: int("parentElementId").references((): AnyMySqlColumn => homebrewStructuredElements.id),
     legacyElementId: int("legacyElementId"),
     type: homebrewElementType.notNull(),
     name: varchar("name", { length: 160 }).notNull(),

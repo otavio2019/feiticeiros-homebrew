@@ -123,3 +123,9 @@
 
 - [ ] Revisar os logs recentes da Vercel após o deploy final e confirmar que não restam erros funcionais de autenticação, sessão ou cadastro nos fluxos corrigidos.
 - [x] Publicar e confirmar na Vercel que o cadastro com e-mail já existente retorna conflito compreensível, em vez de HTTP 500.
+
+- [ ] Comparar a especificação enviada para Origem, Mecânicas, Votos, Técnicas, Armas, relações, automação, modo manual, imagens e etapas de interface com o schema e editor atuais; implementar somente lacunas verificadas.
+- [ ] Validar em produção o fluxo autenticado completo de criação, edição, duplicação, exclusão, troca de módulo e compartilhamento com dados de teste reversíveis.
+- [ ] Concluir e validar a hierarquia pai-filho de Origem e Arma, incluindo duplicação, exclusão em cascata e reordenação entre irmãos.
+- [ ] Concluir e validar o editor e a leitura pública de Ganhos e Perdas de Votos em coleções separadas.
+- [ ] Cobrir a nova estrutura com testes de frontend, contratos tRPC, build Vercel, auditoria TiDB e fluxo de produção reversível.

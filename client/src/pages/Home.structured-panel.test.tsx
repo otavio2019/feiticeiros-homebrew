@@ -44,7 +44,7 @@ vi.mock("@/lib/trpc", () => {
         },
         structuredMechanics: {
           useQuery: () => ({
-            data: { requirements: [], attributeBonuses: [], effects: [], costs: [], damageProfiles: [], ranges: [], conditions: [], evolutions: [] },
+            data: { requirements: [], attributeBonuses: [], effects: [], costs: [], damageProfiles: [], ranges: [], conditions: [], vowExchanges: [], evolutions: [] },
             refetch: mocks.mechanicsRefetch,
           }),
         },
@@ -85,7 +85,7 @@ describe("StructuredElementsPanel", () => {
     await user.type(screen.getByPlaceholderText("Descrição e funcionamento"), "Descrição nova");
     await user.click(screen.getByRole("button", { name: /Adicionar/ }));
     expect(mocks.calls.get("structuredCreate")).toEqual([
-      { homebrewId: 55, moduleId: 7, type: "tecnica", name: "Nova Técnica", description: "Descrição nova", isManual: true },
+      { homebrewId: 55, moduleId: 7, type: "tecnica", name: "Nova Técnica", description: "Descrição nova", ruleSource: "homebrew", isManual: false },
     ]);
 
     await user.click(screen.getByRole("button", { name: "Editar Eco Sombrio" }));
@@ -102,5 +102,19 @@ describe("StructuredElementsPanel", () => {
 
     await user.click(screen.getByRole("button", { name: "Excluir Vazio Cortante" }));
     expect(mocks.calls.get("structuredDelete")).toEqual([{ homebrewId: 55, id: 2 }]);
+  });
+
+  it("salva uma perda de Voto como troca estruturada", async () => {
+    const user = userEvent.setup();
+    render(<StructuredElementsPanel homebrewId={55} moduleId={7} moduleType="votos" />);
+
+    await user.selectOptions(screen.getByLabelText("Tipo de troca do Voto"), "loss");
+    await user.type(screen.getByPlaceholderText("Descrição do ganho ou da perda"), "Não pode recuar");
+    await user.type(screen.getByPlaceholderText("Valor opcional"), "3");
+    await user.click(screen.getAllByRole("button", { name: "Adicionar" })[1]);
+
+    expect(mocks.calls.get("structuredSaveExtendedMechanics")).toEqual([
+      { homebrewId: 55, elementId: 1, vowExchanges: [{ kind: "loss", description: "Não pode recuar", valueNumber: 3 }] },
+    ]);
   });
 });

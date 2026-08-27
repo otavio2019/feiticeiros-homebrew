@@ -23,6 +23,8 @@ vi.mock("./db", () => ({
   createWeaponTechniqueLink: vi.fn(),
   deleteWeaponTechniqueLink: vi.fn(),
   updateWeaponTechniqueLink: vi.fn(),
+  assertStructuredElementForHomebrew: vi.fn(),
+  assertWeaponTechniqueLinkForHomebrew: vi.fn(),
 }));
 
 import * as db from "./db";
@@ -67,6 +69,8 @@ describe("fluxos de dados da biblioteca de Homebrews", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(db.getHomebrewById).mockResolvedValue(ownHomebrew);
+    vi.mocked(db.assertStructuredElementForHomebrew).mockResolvedValue({ id: 11, homebrewId: 7, moduleId: 3, type: "tecnica" } as never);
+    vi.mocked(db.assertWeaponTechniqueLinkForHomebrew).mockResolvedValue({ id: 21, homebrewId: 7 } as never);
   });
 
   it("lista Homebrews do proprietário", async () => {
@@ -129,8 +133,9 @@ describe("fluxos de dados da biblioteca de Homebrews", () => {
   it("salva coleções mecânicas estendidas do proprietário", async () => {
     vi.mocked(db.replaceStructuredExtendedMechanics).mockResolvedValue({ elementId: 11 } as never);
     const caller = appRouter.createCaller(createContext());
-    await caller.homebrew.structuredSaveExtendedMechanics({ homebrewId: 7, elementId: 11, costs: [{ resource: "PE", amount: 2, details: "Custo base" }], damageProfiles: [{ dice: "2d6", modifier: 0, damageType: "energia", details: "Dano direto" }], ranges: [{ range: 12, unit: "metros" }], conditions: [{ name: "Marcado", effect: "Não pode se ocultar." }], evolutions: [{ name: "Aprimoramento", description: "Aumenta o alcance.", isManual: true, ruleSource: "manual" }] });
-    expect(db.replaceStructuredExtendedMechanics).toHaveBeenCalledWith(11, expect.objectContaining({ costs: expect.any(Array), damageProfiles: expect.any(Array), ranges: expect.any(Array), conditions: expect.any(Array), evolutions: expect.any(Array) }));
+    await caller.homebrew.structuredSaveExtendedMechanics({ homebrewId: 7, elementId: 11, costs: [{ resource: "PE", amount: 2, details: "Custo base" }], damageProfiles: [{ dice: "2d6", modifier: 0, damageType: "energia", details: "Dano direto" }], ranges: [{ range: 12, unit: "metros" }], conditions: [{ name: "Marcado", effect: "Não pode se ocultar." }], vowExchanges: [{ kind: "gain", description: "Recebe foco", valueNumber: 1 }, { kind: "loss", description: "Não pode recuar" }], evolutions: [{ name: "Aprimoramento", description: "Aumenta o alcance.", isManual: true, ruleSource: "manual" }] });
+    expect(db.replaceStructuredExtendedMechanics).toHaveBeenCalledWith(11, expect.objectContaining({ costs: expect.any(Array), damageProfiles: expect.any(Array), ranges: expect.any(Array), conditions: expect.any(Array), vowExchanges: [{ kind: "gain", description: "Recebe foco", valueNumber: 1 }, { kind: "loss", description: "Não pode recuar" }], evolutions: expect.any(Array) }));
+    expect(db.assertStructuredElementForHomebrew).toHaveBeenCalledWith(7, 11);
   });
 
   it("cria, lista e exclui elementos estruturados do proprietário", async () => {
@@ -140,10 +145,13 @@ describe("fluxos de dados da biblioteca de Homebrews", () => {
     vi.mocked(db.deleteStructuredElement).mockResolvedValue(element as never);
     const caller = appRouter.createCaller(createContext());
     await caller.homebrew.structuredCreate({ homebrewId: 7, moduleId: 3, type: "tecnica", name: "Eco", description: "Devolve energia.", isManual: true });
+    await caller.homebrew.structuredCreate({ homebrewId: 7, moduleId: 3, parentElementId: 11, type: "caracteristica", name: "Eco menor", description: "Traço filho.", isManual: true });
     await caller.homebrew.structuredList({ homebrewId: 7, moduleId: 3 });
     await caller.homebrew.structuredDelete({ homebrewId: 7, id: 11 });
     expect(db.createStructuredElement).toHaveBeenCalledWith(expect.objectContaining({ homebrewId: 7, moduleId: 3, type: "tecnica", isManual: true }));
-    expect(db.listStructuredElements).toHaveBeenCalledWith(7, 3);
+    expect(db.createStructuredElement).toHaveBeenCalledWith(expect.objectContaining({ homebrewId: 7, moduleId: 3, parentElementId: 11, type: "caracteristica" }));
+    expect(db.assertStructuredElementForHomebrew).toHaveBeenCalledWith(7, 11);
+    expect(db.listStructuredElements).toHaveBeenCalledWith(7, 3, undefined);
     expect(db.deleteStructuredElement).toHaveBeenCalledWith(11);
   });
 

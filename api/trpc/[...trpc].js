@@ -100,7 +100,11 @@ var homebrewElementType = mysqlEnum("homebrewElementType", [
   "mecanica",
   "aptidao",
   "especializacao",
-  "outro"
+  "outro",
+  "caracteristica",
+  "talento",
+  "evolucao",
+  "propriedade"
 ]);
 var imageSource = mysqlEnum("imageSource", ["url", "upload"]);
 var homebrews = mysqlTable(
@@ -195,6 +199,7 @@ var homebrewStructuredElements = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     homebrewId: int("homebrewId").notNull().references(() => homebrews.id),
     moduleId: int("moduleId").notNull().references(() => homebrewModules.id),
+    parentElementId: int("parentElementId").references(() => homebrewStructuredElements.id),
     legacyElementId: int("legacyElementId"),
     type: homebrewElementType.notNull(),
     name: varchar("name", { length: 160 }).notNull(),
@@ -378,6 +383,11 @@ function validateStructuredExtendedMechanics(input, manualMode = false) {
   for (const condition of input.conditions ?? []) {
     if (!condition.name.trim()) errors.push("Condi\xE7\xE3o sem nome.");
     if (!condition.effect.trim()) errors.push("Condi\xE7\xE3o sem efeito.");
+  }
+  for (const exchange of input.vowExchanges ?? []) {
+    if (exchange.kind !== "gain" && exchange.kind !== "loss") errors.push("Troca de Voto sem tipo v\xE1lido.");
+    if (!exchange.description.trim()) errors.push("Ganho ou perda de Voto sem descri\xE7\xE3o.");
+    if (exchange.valueNumber != null && !Number.isInteger(exchange.valueNumber)) errors.push("Troca de Voto com valor num\xE9rico inv\xE1lido.");
   }
   for (const evolution of input.evolutions ?? []) {
     if (!evolution.name.trim()) errors.push("Evolu\xE7\xE3o sem nome.");
@@ -633,6 +643,7 @@ async function duplicateStructuredEntities(database, sourceHomebrewId, clonedHom
     const result = await database.insert(homebrewStructuredElements).values({
       homebrewId: clonedHomebrewId,
       moduleId: clonedModuleId,
+      parentElementId: null,
       legacyElementId: element.legacyElementId ? legacyElementMap.get(element.legacyElementId) ?? null : null,
       type: element.type,
       name: element.name,
@@ -642,6 +653,13 @@ async function duplicateStructuredEntities(database, sourceHomebrewId, clonedHom
       ruleSource: element.ruleSource
     });
     structuredElementMap.set(element.id, Number(result[0].insertId));
+  }
+  for (const element of sourceElements) {
+    const clonedElementId = structuredElementMap.get(element.id);
+    const clonedParentId = element.parentElementId ? structuredElementMap.get(element.parentElementId) : void 0;
+    if (clonedElementId && clonedParentId) {
+      await database.update(homebrewStructuredElements).set({ parentElementId: clonedParentId }).where(eq(homebrewStructuredElements.id, clonedElementId));
+    }
   }
   for (const element of sourceElements) {
     const clonedElementId = structuredElementMap.get(element.id);
@@ -765,24 +783,51 @@ async function removeHomebrewImage(homebrewId, imageId) {
   await database.delete(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.id, imageId)));
   return { success: true };
 }
-async function listStructuredElements(homebrewId, moduleId) {
+async function listStructuredElements(homebrewId, moduleId, parentElementId) {
   const database = await getDb();
   if (!database) return [];
-  const elements = await database.select().from(homebrewStructuredElements).where(moduleId ? and(eq(homebrewStructuredElements.homebrewId, homebrewId), eq(homebrewStructuredElements.moduleId, moduleId)) : eq(homebrewStructuredElements.homebrewId, homebrewId)).orderBy(homebrewStructuredElements.position);
+  const filters = [
+    eq(homebrewStructuredElements.homebrewId, homebrewId),
+    parentElementId ? eq(homebrewStructuredElements.parentElementId, parentElementId) : isNull(homebrewStructuredElements.parentElementId)
+  ];
+  if (moduleId) filters.push(eq(homebrewStructuredElements.moduleId, moduleId));
+  const elements = await database.select().from(homebrewStructuredElements).where(and(...filters)).orderBy(homebrewStructuredElements.position);
   return Promise.all(elements.map(async (element) => ({
     ...element,
     images: await database.select().from(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.elementId, element.id)))
   })));
 }
+async function assertStructuredElementForHomebrew(homebrewId, elementId) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  const rows = await database.select().from(homebrewStructuredElements).where(and(eq(homebrewStructuredElements.id, elementId), eq(homebrewStructuredElements.homebrewId, homebrewId))).limit(1);
+  if (!rows[0]) throw new Error("Elemento estruturado n\xE3o pertence a esta Homebrew.");
+  return rows[0];
+}
+async function assertWeaponTechniqueLinkForHomebrew(homebrewId, linkId) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  const rows = await database.select().from(structuredWeaponTechniqueLinks).where(and(eq(structuredWeaponTechniqueLinks.id, linkId), eq(structuredWeaponTechniqueLinks.homebrewId, homebrewId))).limit(1);
+  if (!rows[0]) throw new Error("V\xEDnculo Arma\u2013T\xE9cnica n\xE3o pertence a esta Homebrew.");
+  return rows[0];
+}
 async function createStructuredElement(input) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  const moduleRows = await database.select({ id: homebrewModules.id }).from(homebrewModules).where(and(eq(homebrewModules.id, input.moduleId), eq(homebrewModules.homebrewId, input.homebrewId))).limit(1);
+  if (!moduleRows[0]) throw new Error("M\xF3dulo n\xE3o pertence a esta Homebrew.");
+  if (input.parentElementId) {
+    const parentRows = await database.select({ id: homebrewStructuredElements.id }).from(homebrewStructuredElements).where(and(eq(homebrewStructuredElements.id, input.parentElementId), eq(homebrewStructuredElements.homebrewId, input.homebrewId), eq(homebrewStructuredElements.moduleId, input.moduleId))).limit(1);
+    if (!parentRows[0]) throw new Error("Elemento pai n\xE3o pertence a este m\xF3dulo da Homebrew.");
+  }
   const result = await database.insert(homebrewStructuredElements).values({
     homebrewId: input.homebrewId,
     moduleId: input.moduleId,
+    parentElementId: input.parentElementId ?? null,
     type: input.type,
     name: input.name,
     description: input.description,
+    ruleSource: input.ruleSource ?? "homebrew",
     isManual: input.isManual ?? false,
     position: input.position ?? 0
   });
@@ -793,6 +838,14 @@ async function createStructuredElement(input) {
 async function updateStructuredElement(id, input) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  const currentRows = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1);
+  const current = currentRows[0];
+  if (!current) throw new Error("Elemento estruturado n\xE3o encontrado.");
+  if (input.parentElementId) {
+    if (input.parentElementId === id) throw new Error("Um elemento n\xE3o pode ser pai de si mesmo.");
+    const parentRows = await database.select({ id: homebrewStructuredElements.id }).from(homebrewStructuredElements).where(and(eq(homebrewStructuredElements.id, input.parentElementId), eq(homebrewStructuredElements.homebrewId, current.homebrewId), eq(homebrewStructuredElements.moduleId, input.moduleId ?? current.moduleId))).limit(1);
+    if (!parentRows[0]) throw new Error("Elemento pai n\xE3o pertence ao mesmo m\xF3dulo da Homebrew.");
+  }
   await database.update(homebrewStructuredElements).set(input).where(eq(homebrewStructuredElements.id, id));
   const rows = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id));
   return rows[0];
@@ -802,18 +855,24 @@ async function deleteStructuredElement(id) {
   if (!database) throw new Error("Banco de dados indispon\xEDvel.");
   const elementRows = await database.select({ homebrewId: homebrewStructuredElements.homebrewId }).from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1);
   const element = elementRows[0];
+  const removeElementTree = async (tx, elementId) => {
+    const children = await tx.select({ id: homebrewStructuredElements.id }).from(homebrewStructuredElements).where(eq(homebrewStructuredElements.parentElementId, elementId));
+    for (const child of children) await removeElementTree(tx, child.id);
+    await tx.delete(structuredWeaponTechniqueLinks).where(or(eq(structuredWeaponTechniqueLinks.weaponElementId, elementId), eq(structuredWeaponTechniqueLinks.techniqueElementId, elementId)));
+    await tx.delete(homebrewImages).where(eq(homebrewImages.elementId, elementId));
+    await tx.delete(structuredRequirements).where(eq(structuredRequirements.elementId, elementId));
+    await tx.delete(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, elementId));
+    await tx.delete(structuredEffects).where(eq(structuredEffects.elementId, elementId));
+    await tx.delete(structuredCosts).where(eq(structuredCosts.elementId, elementId));
+    await tx.delete(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, elementId));
+    await tx.delete(structuredRanges).where(eq(structuredRanges.elementId, elementId));
+    await tx.delete(structuredConditions).where(eq(structuredConditions.elementId, elementId));
+    await tx.delete(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, elementId));
+    await tx.delete(structuredEvolutions).where(eq(structuredEvolutions.elementId, elementId));
+    await tx.delete(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, elementId));
+  };
   await database.transaction(async (tx) => {
-    await tx.delete(homebrewImages).where(eq(homebrewImages.elementId, id));
-    await tx.delete(structuredRequirements).where(eq(structuredRequirements.elementId, id));
-    await tx.delete(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, id));
-    await tx.delete(structuredEffects).where(eq(structuredEffects.elementId, id));
-    await tx.delete(structuredCosts).where(eq(structuredCosts.elementId, id));
-    await tx.delete(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, id));
-    await tx.delete(structuredRanges).where(eq(structuredRanges.elementId, id));
-    await tx.delete(structuredConditions).where(eq(structuredConditions.elementId, id));
-    await tx.delete(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, id));
-    await tx.delete(structuredEvolutions).where(eq(structuredEvolutions.elementId, id));
-    await tx.delete(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id));
+    await removeElementTree(tx, id);
   });
   return { id, homebrewId: element?.homebrewId };
 }
@@ -835,7 +894,7 @@ async function replaceStructuredMechanics(elementId, input) {
 async function getStructuredMechanics(elementId) {
   const database = await getDb();
   if (!database) return { requirements: [], attributeBonuses: [], effects: [] };
-  const [requirements, attributeBonuses, effects, costs, damageProfiles, ranges, conditions, evolutions] = await Promise.all([
+  const [requirements, attributeBonuses, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions] = await Promise.all([
     database.select().from(structuredRequirements).where(eq(structuredRequirements.elementId, elementId)).orderBy(structuredRequirements.position),
     database.select().from(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, elementId)),
     database.select().from(structuredEffects).where(eq(structuredEffects.elementId, elementId)).orderBy(structuredEffects.position),
@@ -843,13 +902,16 @@ async function getStructuredMechanics(elementId) {
     database.select().from(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, elementId)),
     database.select().from(structuredRanges).where(eq(structuredRanges.elementId, elementId)),
     database.select().from(structuredConditions).where(eq(structuredConditions.elementId, elementId)).orderBy(structuredConditions.position),
+    database.select().from(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, elementId)).orderBy(structuredVowExchanges.position),
     database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, elementId)).orderBy(structuredEvolutions.position)
   ]);
-  return { requirements, attributeBonuses, effects, costs, damageProfiles, ranges, conditions, evolutions };
+  return { requirements, attributeBonuses, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions };
 }
 async function createWeaponTechniqueLink(input) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  const [weapon, technique] = await Promise.all([assertStructuredElementForHomebrew(input.homebrewId, input.weaponElementId), assertStructuredElementForHomebrew(input.homebrewId, input.techniqueElementId)]);
+  if (weapon.type !== "arma" || technique.type !== "tecnica") throw new Error("O v\xEDnculo exige uma Arma e uma T\xE9cnica da mesma Homebrew.");
   await database.insert(structuredWeaponTechniqueLinks).values(input);
   return input;
 }
@@ -867,6 +929,9 @@ async function deleteWeaponTechniqueLink(homebrewId, id) {
 async function updateWeaponTechniqueLink(input) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  await assertWeaponTechniqueLinkForHomebrew(input.homebrewId, input.id);
+  const [weapon, technique] = await Promise.all([assertStructuredElementForHomebrew(input.homebrewId, input.weaponElementId), assertStructuredElementForHomebrew(input.homebrewId, input.techniqueElementId)]);
+  if (weapon.type !== "arma" || technique.type !== "tecnica") throw new Error("O v\xEDnculo exige uma Arma e uma T\xE9cnica da mesma Homebrew.");
   const { id, homebrewId, ...changes } = input;
   await database.update(structuredWeaponTechniqueLinks).set(changes).where(and(eq(structuredWeaponTechniqueLinks.homebrewId, homebrewId), eq(structuredWeaponTechniqueLinks.id, id)));
   return input;
@@ -897,7 +962,8 @@ async function reorderStructuredElement(id, direction) {
   const currentRows = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1);
   const current = currentRows[0];
   if (!current) return void 0;
-  const rows = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, current.homebrewId)).orderBy(homebrewStructuredElements.position);
+  const siblingFilter = current.parentElementId ? eq(homebrewStructuredElements.parentElementId, current.parentElementId) : isNull(homebrewStructuredElements.parentElementId);
+  const rows = await database.select().from(homebrewStructuredElements).where(and(eq(homebrewStructuredElements.homebrewId, current.homebrewId), eq(homebrewStructuredElements.moduleId, current.moduleId), siblingFilter)).orderBy(homebrewStructuredElements.position);
   const index2 = rows.findIndex((row) => row.id === id);
   const targetIndex = direction === "up" ? index2 - 1 : index2 + 1;
   if (index2 < 0 || !rows[targetIndex]) return current;
@@ -918,11 +984,13 @@ async function replaceStructuredExtendedMechanics(elementId, input) {
     await tx.delete(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, elementId));
     await tx.delete(structuredRanges).where(eq(structuredRanges.elementId, elementId));
     await tx.delete(structuredConditions).where(eq(structuredConditions.elementId, elementId));
+    await tx.delete(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, elementId));
     await tx.delete(structuredEvolutions).where(eq(structuredEvolutions.elementId, elementId));
     if (input.costs?.length) await tx.insert(structuredCosts).values(input.costs.map((item, position) => ({ elementId, resource: item.resource, amount: item.amount, details: item.details, position })));
     if (input.damageProfiles?.length) await tx.insert(structuredDamageProfiles).values(input.damageProfiles.map((item) => ({ elementId, dice: item.dice, modifier: item.modifier ?? 0, damageType: item.damageType, scaling: item.scaling ?? "", details: item.details })));
     if (input.ranges?.length) await tx.insert(structuredRanges).values(input.ranges.map((item) => ({ elementId, range: item.range, unit: item.unit, area: item.area ?? "", target: item.target ?? "" })));
     if (input.conditions?.length) await tx.insert(structuredConditions).values(input.conditions.map((item, position) => ({ elementId, name: item.name, effect: item.effect, duration: item.duration ?? "", position })));
+    if (input.vowExchanges?.length) await tx.insert(structuredVowExchanges).values(input.vowExchanges.map((item, position) => ({ elementId, kind: item.kind, description: item.description, valueNumber: item.valueNumber ?? null, position })));
     if (input.evolutions?.length) await tx.insert(structuredEvolutions).values(input.evolutions.map((item, position) => ({ elementId, name: item.name, description: item.description, position, isManual: item.isManual ?? false, ruleSource: item.ruleSource ?? "homebrew" })));
   });
   return { elementId };
@@ -1195,6 +1263,7 @@ var homebrewRouter = router({
     altText: z2.string().trim().max(240).optional()
   })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    if (input.elementId) await assertStructuredElementForHomebrew(input.homebrewId, input.elementId);
     return addHomebrewImage({ ...input, source: "url" });
   }),
   uploadImage: protectedProcedure.input(z2.object({
@@ -1207,6 +1276,7 @@ var homebrewRouter = router({
     altText: z2.string().trim().max(240).optional()
   })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    if (input.elementId) await assertStructuredElementForHomebrew(input.homebrewId, input.elementId);
     const bytes = Buffer.from(input.base64, "base64");
     if (bytes.length > 1e6) throw new TRPCError2({ code: "PAYLOAD_TOO_LARGE", message: "Use imagens de at\xE9 1 MB." });
     const extension = input.contentType.split("/")[1] ?? "png";
@@ -1225,46 +1295,56 @@ var homebrewRouter = router({
     const structured = await listStructuredElementsForShare(homebrew.id);
     return { ...detail, structured };
   }),
-  structuredList: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), moduleId: z2.number().int().positive().optional() })).query(async ({ ctx, input }) => {
+  structuredList: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), moduleId: z2.number().int().positive().optional(), parentElementId: z2.number().int().positive().nullable().optional() })).query(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
-    return listStructuredElements(input.homebrewId, input.moduleId);
+    return listStructuredElements(input.homebrewId, input.moduleId, input.parentElementId);
   }),
   structuredCreate: protectedProcedure.input(z2.object({
     homebrewId: z2.number().int().positive(),
     moduleId: z2.number().int().positive(),
-    type: z2.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro"]),
+    type: z2.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro", "caracteristica", "talento", "evolucao", "propriedade"]),
     name: z2.string().trim().min(1).max(160),
     description: z2.string().trim().min(1),
+    parentElementId: z2.number().int().positive().nullable().optional(),
+    ruleSource: z2.enum(["official", "homebrew", "manual"]).optional(),
     isManual: z2.boolean().default(false),
     position: z2.number().int().min(0).default(0)
   })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    if (input.parentElementId) await assertStructuredElementForHomebrew(input.homebrewId, input.parentElementId);
     return createStructuredElement(input);
   }),
   structuredUpdate: protectedProcedure.input(z2.object({
     homebrewId: z2.number().int().positive(),
     id: z2.number().int().positive(),
     moduleId: z2.number().int().positive().optional(),
-    type: z2.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro"]).optional(),
+    type: z2.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro", "caracteristica", "talento", "evolucao", "propriedade"]).optional(),
     name: z2.string().trim().min(1).max(160).optional(),
     description: z2.string().trim().min(1).optional(),
+    parentElementId: z2.number().int().positive().nullable().optional(),
+    ruleSource: z2.enum(["official", "homebrew", "manual"]).optional(),
     isManual: z2.boolean().optional(),
     position: z2.number().int().min(0).optional()
   })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.id);
+    if (input.parentElementId) await assertStructuredElementForHomebrew(input.homebrewId, input.parentElementId);
     const { id, homebrewId: _homebrewId, ...changes } = input;
     return updateStructuredElement(id, changes);
   }),
   structuredDelete: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), id: z2.number().int().positive() })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.id);
     return deleteStructuredElement(input.id);
   }),
   structuredReorder: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), id: z2.number().int().positive(), direction: z2.enum(["up", "down"]) })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.id);
     return reorderStructuredElement(input.id, input.direction);
   }),
   structuredMechanics: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), elementId: z2.number().int().positive() })).query(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.elementId);
     return getStructuredMechanics(input.elementId);
   }),
   structuredWeaponTechniqueLinks: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive() })).query(async ({ ctx, input }) => {
@@ -1273,14 +1353,20 @@ var homebrewRouter = router({
   }),
   structuredWeaponTechniqueLinkCreate: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), weaponElementId: z2.number().int().positive(), techniqueElementId: z2.number().int().positive() })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.weaponElementId);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.techniqueElementId);
     return createWeaponTechniqueLink(input);
   }),
   structuredWeaponTechniqueLinkDelete: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), id: z2.number().int().positive() })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    await assertWeaponTechniqueLinkForHomebrew(input.homebrewId, input.id);
     return deleteWeaponTechniqueLink(input.homebrewId, input.id);
   }),
   structuredWeaponTechniqueLinkUpdate: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), id: z2.number().int().positive(), weaponElementId: z2.number().int().positive(), techniqueElementId: z2.number().int().positive() })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    await assertWeaponTechniqueLinkForHomebrew(input.homebrewId, input.id);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.weaponElementId);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.techniqueElementId);
     return updateWeaponTechniqueLink(input);
   }),
   structuredSaveExtendedMechanics: protectedProcedure.input(z2.object({
@@ -1290,9 +1376,11 @@ var homebrewRouter = router({
     damageProfiles: z2.array(z2.object({ dice: z2.string().trim().min(1).max(32), modifier: z2.number().int().optional(), damageType: z2.string().trim().min(1).max(64), scaling: z2.string().max(255).optional(), details: z2.string().trim().min(1) })).optional(),
     ranges: z2.array(z2.object({ range: z2.number().int().min(0), unit: z2.string().trim().min(1).max(32), area: z2.string().max(255).optional(), target: z2.string().max(255).optional() })).optional(),
     conditions: z2.array(z2.object({ name: z2.string().trim().min(1).max(120), effect: z2.string().trim().min(1), duration: z2.string().max(120).optional() })).optional(),
+    vowExchanges: z2.array(z2.object({ kind: z2.enum(["gain", "loss"]), description: z2.string().trim().min(1), valueNumber: z2.number().int().nullable().optional() })).optional(),
     evolutions: z2.array(z2.object({ name: z2.string().trim().min(1).max(160), description: z2.string().trim().min(1), isManual: z2.boolean().optional(), ruleSource: z2.enum(["official", "homebrew", "manual"]).optional() })).optional()
   })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.elementId);
     const { homebrewId: _homebrewId, elementId, ...mechanics } = input;
     return replaceStructuredExtendedMechanics(elementId, mechanics);
   }),
@@ -1304,6 +1392,7 @@ var homebrewRouter = router({
     effects: z2.array(z2.object({ effectType: z2.enum(["text", "bonus", "penalty", "condition", "custom"]).optional(), description: z2.string().trim().min(1), valueNumber: z2.number().int().nullable().optional() })).optional()
   })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.elementId);
     const { homebrewId: _homebrewId, elementId, ...mechanics } = input;
     return replaceStructuredMechanics(elementId, mechanics);
   })

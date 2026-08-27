@@ -208,6 +208,7 @@ export function validateStructuredExtendedMechanics(input: {
   damageProfiles?: Array<{ dice: string; damageType: string; details: string }>;
   ranges?: Array<{ range: number; unit: string }>;
   conditions?: Array<{ name: string; effect: string }>;
+  vowExchanges?: Array<{ kind: "gain" | "loss"; description: string; valueNumber?: number | null }>;
   evolutions?: Array<{ name: string; description: string }>;
 }, manualMode = false): StructuredMechanicsValidation {
   const errors: string[] = [];
@@ -228,6 +229,11 @@ export function validateStructuredExtendedMechanics(input: {
   for (const condition of input.conditions ?? []) {
     if (!condition.name.trim()) errors.push("Condição sem nome.");
     if (!condition.effect.trim()) errors.push("Condição sem efeito.");
+  }
+  for (const exchange of input.vowExchanges ?? []) {
+    if (exchange.kind !== "gain" && exchange.kind !== "loss") errors.push("Troca de Voto sem tipo válido.");
+    if (!exchange.description.trim()) errors.push("Ganho ou perda de Voto sem descrição.");
+    if (exchange.valueNumber != null && !Number.isInteger(exchange.valueNumber)) errors.push("Troca de Voto com valor numérico inválido.");
   }
   for (const evolution of input.evolutions ?? []) {
     if (!evolution.name.trim()) errors.push("Evolução sem nome.");
