@@ -10,6 +10,7 @@ import {
   isVowCombinationAllowed,
   SPELL_COST_BY_LEVEL,
   validateStructuredMechanics,
+  validateStructuredExtendedMechanics,
 } from "../shared/homebrewRules";
 
 describe("regras estruturadas de Homebrew", () => {
@@ -76,6 +77,12 @@ describe("regras estruturadas de Homebrew", () => {
     expect(validateStructuredMechanics({ requirements: [{ type: "atributo", valueNumber: 3 }], attributeBonuses: [{ attribute: "forca", value: 2 }], effects: [{ description: "Aplica condição." }] }).valid).toBe(true);
     expect(validateStructuredMechanics({ requirements: [{ type: "", valueText: null }] }).valid).toBe(false);
     expect(validateStructuredMechanics({ requirements: [{ type: "", valueText: null }] }, true).valid).toBe(true);
+  });
+
+  it("valida coleções mecânicas estendidas sem presumir fórmulas do livro", () => {
+    expect(validateStructuredExtendedMechanics({ costs: [{ resource: "PE", amount: 2, details: "Custo" }], damageProfiles: [{ dice: "2d6", damageType: "energia", details: "Dano" }], ranges: [{ range: 12, unit: "metros" }], conditions: [{ name: "Marcado", effect: "Efeito" }], evolutions: [{ name: "Avanço", description: "Descrição" }] }).valid).toBe(true);
+    expect(validateStructuredExtendedMechanics({ costs: [{ resource: "", amount: -1, details: "" }], ranges: [{ range: -2, unit: "" }] }).valid).toBe(false);
+    expect(validateStructuredExtendedMechanics({ costs: [{ resource: "", amount: -1, details: "" }] }, true).valid).toBe(true);
   });
 
   it("valida campos específicos de técnica e voto", () => {

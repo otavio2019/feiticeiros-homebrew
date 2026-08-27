@@ -201,3 +201,37 @@ export function validateStructuredMechanics(input: {
   }
   return { valid: manualMode || errors.length === 0, errors };
 }
+
+
+export function validateStructuredExtendedMechanics(input: {
+  costs?: Array<{ resource: string; amount: number; details: string }>;
+  damageProfiles?: Array<{ dice: string; damageType: string; details: string }>;
+  ranges?: Array<{ range: number; unit: string }>;
+  conditions?: Array<{ name: string; effect: string }>;
+  evolutions?: Array<{ name: string; description: string }>;
+}, manualMode = false): StructuredMechanicsValidation {
+  const errors: string[] = [];
+  for (const cost of input.costs ?? []) {
+    if (!cost.resource.trim()) errors.push("Custo sem recurso.");
+    if (!Number.isInteger(cost.amount) || cost.amount < 0) errors.push("Custo com quantidade inválida.");
+    if (!cost.details.trim()) errors.push("Custo sem detalhes.");
+  }
+  for (const damage of input.damageProfiles ?? []) {
+    if (!damage.dice.trim()) errors.push("Perfil de dano sem dados.");
+    if (!damage.damageType.trim()) errors.push("Perfil de dano sem tipo.");
+    if (!damage.details.trim()) errors.push("Perfil de dano sem detalhes.");
+  }
+  for (const range of input.ranges ?? []) {
+    if (!Number.isInteger(range.range) || range.range < 0) errors.push("Alcance inválido.");
+    if (!range.unit.trim()) errors.push("Alcance sem unidade.");
+  }
+  for (const condition of input.conditions ?? []) {
+    if (!condition.name.trim()) errors.push("Condição sem nome.");
+    if (!condition.effect.trim()) errors.push("Condição sem efeito.");
+  }
+  for (const evolution of input.evolutions ?? []) {
+    if (!evolution.name.trim()) errors.push("Evolução sem nome.");
+    if (!evolution.description.trim()) errors.push("Evolução sem descrição.");
+  }
+  return { valid: manualMode || errors.length === 0, errors };
+}

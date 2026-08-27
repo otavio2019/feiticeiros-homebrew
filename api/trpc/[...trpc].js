@@ -358,6 +358,32 @@ function validateStructuredMechanics(input, manualMode = false) {
   }
   return { valid: manualMode || errors.length === 0, errors };
 }
+function validateStructuredExtendedMechanics(input, manualMode = false) {
+  const errors = [];
+  for (const cost of input.costs ?? []) {
+    if (!cost.resource.trim()) errors.push("Custo sem recurso.");
+    if (!Number.isInteger(cost.amount) || cost.amount < 0) errors.push("Custo com quantidade inv\xE1lida.");
+    if (!cost.details.trim()) errors.push("Custo sem detalhes.");
+  }
+  for (const damage of input.damageProfiles ?? []) {
+    if (!damage.dice.trim()) errors.push("Perfil de dano sem dados.");
+    if (!damage.damageType.trim()) errors.push("Perfil de dano sem tipo.");
+    if (!damage.details.trim()) errors.push("Perfil de dano sem detalhes.");
+  }
+  for (const range of input.ranges ?? []) {
+    if (!Number.isInteger(range.range) || range.range < 0) errors.push("Alcance inv\xE1lido.");
+    if (!range.unit.trim()) errors.push("Alcance sem unidade.");
+  }
+  for (const condition of input.conditions ?? []) {
+    if (!condition.name.trim()) errors.push("Condi\xE7\xE3o sem nome.");
+    if (!condition.effect.trim()) errors.push("Condi\xE7\xE3o sem efeito.");
+  }
+  for (const evolution of input.evolutions ?? []) {
+    if (!evolution.name.trim()) errors.push("Evolu\xE7\xE3o sem nome.");
+    if (!evolution.description.trim()) errors.push("Evolu\xE7\xE3o sem descri\xE7\xE3o.");
+  }
+  return { valid: manualMode || errors.length === 0, errors };
+}
 
 // server/_core/env.ts
 var ENV = {
@@ -783,6 +809,8 @@ async function reorderStructuredElement(id, direction) {
 async function replaceStructuredExtendedMechanics(elementId, input) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  const validation = validateStructuredExtendedMechanics(input);
+  if (!validation.valid) throw new Error(`Dados mec\xE2nicos estendidos inv\xE1lidos: ${validation.errors.join(" ")}`);
   await database.transaction(async (tx) => {
     await tx.delete(structuredCosts).where(eq(structuredCosts.elementId, elementId));
     await tx.delete(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, elementId));
