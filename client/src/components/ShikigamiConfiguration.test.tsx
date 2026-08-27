@@ -21,6 +21,8 @@ describe("ShikigamiConfiguration", () => {
     expect(screen.getByText("Características do Shikigami")).toBeTruthy();
     expect(screen.getAllByText("Sabedoria").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Carisma").length).toBeGreaterThan(0);
+    expect(screen.getByText("0/10")).toBeTruthy();
+    expect(screen.getAllByText("Modificador: -1")).toHaveLength(6);
 
     const controllerToggle = screen.getByLabelText(/Concentrar Poder/);
     expect((controllerToggle as HTMLInputElement).checked).toBe(false);
