@@ -115,7 +115,7 @@ export const homebrewRouter = router({
     if (!homebrew) throw new TRPCError({ code: "NOT_FOUND", message: "Esta Homebrew não está disponível para leitura." });
     const detail = await db.getHomebrewDetail(homebrew.id);
     if (!detail) throw new TRPCError({ code: "NOT_FOUND", message: "Esta Homebrew não está disponível para leitura." });
-    const structured = await db.listStructuredElements(homebrew.id);
+    const structured = await db.listStructuredElementsForShare(homebrew.id);
     return { ...detail, structured };
   }),
 

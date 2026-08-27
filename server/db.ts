@@ -453,3 +453,26 @@ export async function createWeaponTechniqueLink(input: { homebrewId: number; wea
   await database.insert(structuredWeaponTechniqueLinks).values(input);
   return input;
 }
+
+
+export async function listStructuredElementsForShare(homebrewId: number) {
+  const database = await getDb();
+  if (!database) return [];
+  const elements = await database.select().from(homebrewStructuredElements)
+    .where(eq(homebrewStructuredElements.homebrewId, homebrewId))
+    .orderBy(homebrewStructuredElements.position);
+  return Promise.all(elements.map(async element => {
+    const [attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions] = await Promise.all([
+      database.select().from(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, element.id)),
+      database.select().from(structuredRequirements).where(eq(structuredRequirements.elementId, element.id)).orderBy(structuredRequirements.position),
+      database.select().from(structuredEffects).where(eq(structuredEffects.elementId, element.id)).orderBy(structuredEffects.position),
+      database.select().from(structuredCosts).where(eq(structuredCosts.elementId, element.id)).orderBy(structuredCosts.position),
+      database.select().from(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, element.id)),
+      database.select().from(structuredRanges).where(eq(structuredRanges.elementId, element.id)),
+      database.select().from(structuredConditions).where(eq(structuredConditions.elementId, element.id)).orderBy(structuredConditions.position),
+      database.select().from(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, element.id)).orderBy(structuredVowExchanges.position),
+      database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, element.id)).orderBy(structuredEvolutions.position),
+    ]);
+    return { ...element, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions } };
+  }));
+}

@@ -83,7 +83,7 @@
 - [x] Integrar painel inicial de elementos estruturados com criação e exclusão no editor modular.
 - [ ] Implementar validações automáticas de requisitos, custos, dano, condições, bônus e evoluções sem inventar regras ausentes no livro.
 - [ ] Preservar imagens opcionais por URL ou Cloudinary para Homebrew e elementos compatíveis.
-- [ ] Atualizar a ficha compartilhável e a pré-visualização para exibir dados mecânicos, regras oficiais e configurações manuais.
+- [x] Atualizar a ficha compartilhável e a pré-visualização para exibir dados mecânicos, regras oficiais e configurações manuais.
 - [x] Criar migrations Drizzle revisadas para as novas entidades e relações, aplicando-as no TiDB Cloud.
 - [ ] Cobrir a evolução com testes de schema, relações, cálculos, validações, modo manual, CRUD, duplicação e compartilhamento.
 - [ ] Validar TypeScript, npm install, testes, build, criação, edição, duplicação, exclusão, compartilhamento, imagens e módulos no ambiente final.

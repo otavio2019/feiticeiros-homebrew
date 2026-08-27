@@ -13,6 +13,7 @@ vi.mock("./db", () => ({
   addHomebrewImage: vi.fn(),
   removeHomebrewImage: vi.fn(),
   listStructuredElements: vi.fn(),
+  listStructuredElementsForShare: vi.fn(),
 }));
 
 import * as db from "./db";
@@ -98,9 +99,10 @@ describe("fluxos de dados da biblioteca de Homebrews", () => {
     const detail = { ...ownHomebrew, modules: [], elements: [], images: [] };
     vi.mocked(db.getShareableHomebrew).mockResolvedValue(ownHomebrew);
     vi.mocked(db.getHomebrewDetail).mockResolvedValue(detail as never);
-    vi.mocked(db.listStructuredElements).mockResolvedValue([]);
+    const structured = [{ id: 11, type: "tecnica", name: "Eco", description: "Devolve energia.", isManual: true, ruleSource: "manual", mechanics: { requirements: [], attributeBonuses: [{ attribute: "sabedoria", value: 2 }], effects: [], costs: [], damageProfiles: [], ranges: [], conditions: [], vowExchanges: [], evolutions: [] } }];
+    vi.mocked(db.listStructuredElementsForShare).mockResolvedValue(structured as never);
     const result = await appRouter.createCaller(createContext()).homebrew.shared({ shareId: "compartilhar-7" });
-    expect(result).toEqual({ ...detail, structured: [] });
+    expect(result).toEqual({ ...detail, structured });
     expect(db.getShareableHomebrew).toHaveBeenCalledWith("compartilhar-7");
   });
 });

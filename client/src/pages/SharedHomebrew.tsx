@@ -47,6 +47,7 @@ export default function SharedHomebrew() {
   const customFields = Array.isArray(data?.customFields) ? data.customFields.map(String) : [];
   const shikigami = asRecord(data?.shikigami);
   const images = "images" in homebrew && Array.isArray(homebrew.images) ? homebrew.images : [];
+  const structured = "structured" in homebrew && Array.isArray(homebrew.structured) ? homebrew.structured : [];
 
   return (
     <main className="min-h-screen bg-[#0e0d15] px-4 py-6 text-stone-100 sm:px-7 sm:py-9">
@@ -64,6 +65,7 @@ export default function SharedHomebrew() {
             <div className="flex flex-col justify-between gap-5 sm:flex-row"><div className="max-w-2xl"><h1 className="font-serif text-3xl font-medium text-white sm:text-4xl">{homebrew.title}</h1><p className="mt-4 text-sm leading-relaxed text-stone-400">{homebrew.summary}</p></div><div className="h-fit rounded-xl border border-white/8 bg-white/[0.025] px-4 py-3 text-right"><p className="text-[10px] uppercase tracking-[0.12em] text-stone-500">Status</p><p className="mt-1 text-xs font-semibold text-emerald-300">Pronta para leitura</p></div></div>
             {homebrew.manualMode && <div className="mt-5 rounded-xl border border-fuchsia-300/15 bg-fuchsia-500/[0.07] p-4 text-[11px] leading-relaxed text-fuchsia-100"><div className="flex items-center gap-2 font-semibold"><WandSparkles size={14} /> Conteúdo personalizado em modo manual</div>{customFields.length > 0 && <div className="mt-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-fuchsia-200/75">Campos personalizados</p><div className="mt-2 flex flex-wrap gap-1.5">{customFields.map(field => <span key={field} className="rounded-md border border-fuchsia-300/15 bg-black/10 px-2 py-1 text-[10px] text-fuchsia-100">{field}</span>)}</div></div>}{manualNotes ? <p className="mt-3 whitespace-pre-wrap text-stone-300">{manualNotes}</p> : <p className="mt-2 text-stone-400">O autor marcou esta ficha como personalizada; consulte as notas dele para detalhes adicionais.</p>}</div>}
             {shikigami && <ShikigamiReadCard sheet={shikigami} />}
+            {structured.length > 0 && <section className="mt-7 rounded-2xl border border-fuchsia-300/12 bg-fuchsia-500/[0.035] p-5"><div className="flex items-center gap-2"><WandSparkles size={16} className="text-fuchsia-300" /><div><h2 className="text-sm font-semibold text-stone-100">Elementos estruturados</h2><p className="mt-1 text-[11px] text-stone-500">Regras separadas por tipo, sem perder marcações manuais.</p></div></div><div className="mt-4 grid gap-3 sm:grid-cols-2">{structured.map(element => <article key={element.id} className="rounded-xl border border-white/8 bg-black/10 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-semibold text-stone-200">{element.name}</h3>{element.isManual && <span className="rounded-md bg-fuchsia-500/15 px-2 py-1 text-[9px] font-semibold text-fuchsia-200">Manual</span>}</div><p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-rose-300">{element.type} · {element.ruleSource}</p><p className="mt-2 whitespace-pre-wrap text-[11px] leading-relaxed text-stone-400">{element.description}</p><StructuredMechanicsReadout mechanics={element.mechanics} /></article>)}</div></section>}
             <div className="my-8 border-t border-white/8" />
             <section><div className="flex items-center gap-2"><BookOpen size={16} className="text-rose-300" /><h2 className="text-sm font-semibold text-white">Estrutura da Homebrew</h2></div><div className="mt-4 grid gap-3 sm:grid-cols-2">{homebrew.modules.map(module => { const moduleImage = images.find(image => image.moduleId === module.id); return <div key={module.id} className="overflow-hidden rounded-xl border border-white/8 bg-white/[0.025]">{moduleImage && <img src={moduleImage.url} alt={moduleImage.altText || `Ilustração de ${module.type}`} className="h-24 w-full object-cover" />}<div className="p-4"><div className="flex items-center gap-2 text-xs font-semibold text-stone-200"><Link2 size={14} className="text-rose-300" /> {String(module.type).replace(/^./, letter => letter.toUpperCase())}</div><p className="mt-2 text-[11px] leading-relaxed text-stone-500">Esta seção faz parte da estrutura modular desta ficha.</p></div></div>; })}</div></section>
             <div className="mt-8 flex items-start gap-3 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] p-4"><ShieldCheck size={17} className="mt-0.5 text-emerald-400" /><p className="text-xs leading-relaxed text-stone-400">Esta é uma ficha de leitura. Conteúdos personalizados, quando houver, são identificados pelo autor no construtor.</p></div>
@@ -72,6 +74,21 @@ export default function SharedHomebrew() {
       </div>
     </main>
   );
+}
+
+function StructuredMechanicsReadout({ mechanics }: { mechanics: { requirements: Array<Record<string, unknown>>; attributeBonuses: Array<Record<string, unknown>>; effects: Array<Record<string, unknown>>; costs: Array<Record<string, unknown>>; damageProfiles: Array<Record<string, unknown>>; ranges: Array<Record<string, unknown>>; conditions: Array<Record<string, unknown>>; vowExchanges: Array<Record<string, unknown>>; evolutions: Array<Record<string, unknown>> } }) {
+  const groups = [
+    ["Requisitos", mechanics.requirements.map(item => `${String(item.type)} ${String(item.operator ?? "")} ${String(item.valueText ?? item.valueNumber ?? "")}`)],
+    ["Bônus", mechanics.attributeBonuses.map(item => `${String(item.attribute)} ${Number(item.value) >= 0 ? "+" : ""}${String(item.value)}`)],
+    ["Efeitos", mechanics.effects.map(item => `${String(item.effectType)}: ${String(item.description)}`)],
+    ["Custos", mechanics.costs.map(item => `${String(item.resource)}: ${String(item.amount)} — ${String(item.details)}`)],
+    ["Dano", mechanics.damageProfiles.map(item => `${String(item.dice)}${Number(item.modifier) >= 0 ? "+" : ""}${String(item.modifier)} ${String(item.damageType)}`)],
+    ["Alcance", mechanics.ranges.map(item => `${String(item.range)} ${String(item.unit)} · ${String(item.target)}`)],
+    ["Condições", mechanics.conditions.map(item => `${String(item.name)}: ${String(item.effect)}`)],
+    ["Evoluções", mechanics.evolutions.map(item => `${String(item.name)}: ${String(item.description)}`)],
+  ].filter(([, values]) => values.length > 0);
+  if (!groups.length) return null;
+  return <div className="mt-3 space-y-2">{groups.map(([label, values]) => <div key={String(label)}><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-stone-500">{String(label)}</p><ul className="mt-1 space-y-1">{(values as string[]).map(value => <li key={value} className="text-[10px] leading-relaxed text-stone-400">{value}</li>)}</ul></div>)}</div>;
 }
 
 function ShikigamiReadCard({ sheet }: { sheet: Record<string, unknown> }) {
