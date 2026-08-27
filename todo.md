@@ -107,5 +107,8 @@
 - [ ] Anexar evidência verificável do desligamento Railway por tela, exportação do provedor ou resposta técnica equivalente.
 
 - [ ] Corrigir a falha de consulta de autenticação em produção para usuários existentes no TiDB e validar login local.
-- [ ] Sincronizar o `pnpm-lock.yaml` com as dependências de testes para desbloquear o build CI/CD da Vercel.
+- [x] Sincronizar o `pnpm-lock.yaml` com as dependências de testes para desbloquear o build CI/CD da Vercel.
 - [ ] Republicar a correção e repetir a validação autenticada no ambiente final.
+
+- [ ] Diagnosticar e corrigir a sessão que não permanece após login na produção Vercel, incluindo cookie HTTPS, domínio e leitura no endpoint `auth.me`.
+- [ ] Validar login persistido e logout no navegador de produção após a correção.
