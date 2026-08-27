@@ -17,6 +17,10 @@ vi.mock("./db", () => ({
   updateStructuredElement: vi.fn(),
   reorderStructuredElement: vi.fn(),
   replaceStructuredExtendedMechanics: vi.fn(),
+  listWeaponTechniqueLinks: vi.fn(),
+  createWeaponTechniqueLink: vi.fn(),
+  deleteWeaponTechniqueLink: vi.fn(),
+  updateWeaponTechniqueLink: vi.fn(),
 }));
 
 import * as db from "./db";
@@ -96,6 +100,28 @@ describe("fluxos de dados da biblioteca de Homebrews", () => {
     expect(db.updateHomebrew).toHaveBeenCalledWith(7, { title: "Atualizada" });
     expect(db.duplicateHomebrew).toHaveBeenCalledWith(ownHomebrew, 1, expect.any(String));
     expect(db.deleteHomebrew).toHaveBeenCalledWith(7);
+  });
+
+  it("mantém vínculos Arma–Técnica sob autorização do proprietário", async () => {
+    vi.mocked(db.listWeaponTechniqueLinks).mockResolvedValue([{ id: 21, homebrewId: 7, weaponElementId: 11, techniqueElementId: 12 }] as never);
+    vi.mocked(db.createWeaponTechniqueLink).mockResolvedValue({ homebrewId: 7, weaponElementId: 11, techniqueElementId: 12 } as never);
+    vi.mocked(db.deleteWeaponTechniqueLink).mockResolvedValue({ id: 21 } as never);
+    vi.mocked(db.updateWeaponTechniqueLink).mockResolvedValue({ id: 21, homebrewId: 7, weaponElementId: 13, techniqueElementId: 14 } as never);
+    const caller = appRouter.createCaller(createContext());
+    await expect(caller.homebrew.structuredWeaponTechniqueLinks({ homebrewId: 7 })).resolves.toHaveLength(1);
+    await caller.homebrew.structuredWeaponTechniqueLinkCreate({ homebrewId: 7, weaponElementId: 11, techniqueElementId: 12 });
+    await caller.homebrew.structuredWeaponTechniqueLinkDelete({ homebrewId: 7, id: 21 });
+    await caller.homebrew.structuredWeaponTechniqueLinkUpdate({ homebrewId: 7, id: 21, weaponElementId: 13, techniqueElementId: 14 });
+    expect(db.createWeaponTechniqueLink).toHaveBeenCalledWith({ homebrewId: 7, weaponElementId: 11, techniqueElementId: 12 });
+    expect(db.deleteWeaponTechniqueLink).toHaveBeenCalledWith(7, 21);
+    expect(db.updateWeaponTechniqueLink).toHaveBeenCalledWith({ homebrewId: 7, id: 21, weaponElementId: 13, techniqueElementId: 14 });
+  });
+
+  it("remove imagem vinculada de elemento do proprietário", async () => {
+    vi.mocked(db.removeHomebrewImage).mockResolvedValue({ success: true } as never);
+    const caller = appRouter.createCaller(createContext());
+    await caller.homebrew.removeImage({ homebrewId: 7, imageId: 44 });
+    expect(db.removeHomebrewImage).toHaveBeenCalledWith(7, 44);
   });
 
   it("salva coleções mecânicas estendidas do proprietário", async () => {

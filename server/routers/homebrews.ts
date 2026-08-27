@@ -120,10 +120,10 @@ export const homebrewRouter = router({
   }),
 
   structuredList: protectedProcedure
-    .input(z.object({ homebrewId: z.number().int().positive() }))
+    .input(z.object({ homebrewId: z.number().int().positive(), moduleId: z.number().int().positive().optional() }))
     .query(async ({ ctx, input }) => {
       await assertOwner(input.homebrewId, ctx.user.id);
-      return db.listStructuredElements(input.homebrewId);
+      return db.listStructuredElements(input.homebrewId, input.moduleId);
     }),
 
   structuredCreate: protectedProcedure
@@ -178,6 +178,30 @@ export const homebrewRouter = router({
       return db.getStructuredMechanics(input.elementId);
     }),
 
+  structuredWeaponTechniqueLinks: protectedProcedure
+    .input(z.object({ homebrewId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      return db.listWeaponTechniqueLinks(input.homebrewId);
+    }),
+  structuredWeaponTechniqueLinkCreate: protectedProcedure
+    .input(z.object({ homebrewId: z.number().int().positive(), weaponElementId: z.number().int().positive(), techniqueElementId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      return db.createWeaponTechniqueLink(input);
+    }),
+  structuredWeaponTechniqueLinkDelete: protectedProcedure
+    .input(z.object({ homebrewId: z.number().int().positive(), id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      return db.deleteWeaponTechniqueLink(input.homebrewId, input.id);
+    }),
+  structuredWeaponTechniqueLinkUpdate: protectedProcedure
+    .input(z.object({ homebrewId: z.number().int().positive(), id: z.number().int().positive(), weaponElementId: z.number().int().positive(), techniqueElementId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      return db.updateWeaponTechniqueLink(input);
+    }),
   structuredSaveExtendedMechanics: protectedProcedure
     .input(z.object({
       homebrewId: z.number().int().positive(),

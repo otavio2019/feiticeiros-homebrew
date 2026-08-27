@@ -363,11 +363,11 @@ export async function removeHomebrewImage(homebrewId: number, imageId: number) {
 }
 
 
-export async function listStructuredElements(homebrewId: number) {
+export async function listStructuredElements(homebrewId: number, moduleId?: number) {
   const database = await getDb();
   if (!database) return [];
   const elements = await database.select().from(homebrewStructuredElements)
-    .where(eq(homebrewStructuredElements.homebrewId, homebrewId))
+    .where(moduleId ? and(eq(homebrewStructuredElements.homebrewId, homebrewId), eq(homebrewStructuredElements.moduleId, moduleId)) : eq(homebrewStructuredElements.homebrewId, homebrewId))
     .orderBy(homebrewStructuredElements.position);
   return Promise.all(elements.map(async element => ({
     ...element,
@@ -476,6 +476,24 @@ export async function createWeaponTechniqueLink(input: { homebrewId: number; wea
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indisponível.");
   await database.insert(structuredWeaponTechniqueLinks).values(input);
+  return input;
+}
+export async function listWeaponTechniqueLinks(homebrewId: number) {
+  const database = await getDb();
+  if (!database) return [];
+  return database.select().from(structuredWeaponTechniqueLinks).where(eq(structuredWeaponTechniqueLinks.homebrewId, homebrewId));
+}
+export async function deleteWeaponTechniqueLink(homebrewId: number, id: number) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  await database.delete(structuredWeaponTechniqueLinks).where(and(eq(structuredWeaponTechniqueLinks.homebrewId, homebrewId), eq(structuredWeaponTechniqueLinks.id, id)));
+  return { id };
+}
+export async function updateWeaponTechniqueLink(input: { homebrewId: number; id: number; weaponElementId: number; techniqueElementId: number }) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  const { id, homebrewId, ...changes } = input;
+  await database.update(structuredWeaponTechniqueLinks).set(changes).where(and(eq(structuredWeaponTechniqueLinks.homebrewId, homebrewId), eq(structuredWeaponTechniqueLinks.id, id)));
   return input;
 }
 

@@ -687,10 +687,10 @@ async function removeHomebrewImage(homebrewId, imageId) {
   await database.delete(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.id, imageId)));
   return { success: true };
 }
-async function listStructuredElements(homebrewId) {
+async function listStructuredElements(homebrewId, moduleId) {
   const database = await getDb();
   if (!database) return [];
-  const elements = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, homebrewId)).orderBy(homebrewStructuredElements.position);
+  const elements = await database.select().from(homebrewStructuredElements).where(moduleId ? and(eq(homebrewStructuredElements.homebrewId, homebrewId), eq(homebrewStructuredElements.moduleId, moduleId)) : eq(homebrewStructuredElements.homebrewId, homebrewId)).orderBy(homebrewStructuredElements.position);
   return Promise.all(elements.map(async (element) => ({
     ...element,
     images: await database.select().from(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.elementId, element.id)))
@@ -768,6 +768,30 @@ async function getStructuredMechanics(elementId) {
     database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, elementId)).orderBy(structuredEvolutions.position)
   ]);
   return { requirements, attributeBonuses, effects, costs, damageProfiles, ranges, conditions, evolutions };
+}
+async function createWeaponTechniqueLink(input) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  await database.insert(structuredWeaponTechniqueLinks).values(input);
+  return input;
+}
+async function listWeaponTechniqueLinks(homebrewId) {
+  const database = await getDb();
+  if (!database) return [];
+  return database.select().from(structuredWeaponTechniqueLinks).where(eq(structuredWeaponTechniqueLinks.homebrewId, homebrewId));
+}
+async function deleteWeaponTechniqueLink(homebrewId, id) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  await database.delete(structuredWeaponTechniqueLinks).where(and(eq(structuredWeaponTechniqueLinks.homebrewId, homebrewId), eq(structuredWeaponTechniqueLinks.id, id)));
+  return { id };
+}
+async function updateWeaponTechniqueLink(input) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  const { id, homebrewId, ...changes } = input;
+  await database.update(structuredWeaponTechniqueLinks).set(changes).where(and(eq(structuredWeaponTechniqueLinks.homebrewId, homebrewId), eq(structuredWeaponTechniqueLinks.id, id)));
+  return input;
 }
 async function listStructuredElementsForShare(homebrewId) {
   const database = await getDb();
@@ -1123,9 +1147,9 @@ var homebrewRouter = router({
     const structured = await listStructuredElementsForShare(homebrew.id);
     return { ...detail, structured };
   }),
-  structuredList: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive() })).query(async ({ ctx, input }) => {
+  structuredList: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), moduleId: z2.number().int().positive().optional() })).query(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
-    return listStructuredElements(input.homebrewId);
+    return listStructuredElements(input.homebrewId, input.moduleId);
   }),
   structuredCreate: protectedProcedure.input(z2.object({
     homebrewId: z2.number().int().positive(),
@@ -1164,6 +1188,22 @@ var homebrewRouter = router({
   structuredMechanics: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), elementId: z2.number().int().positive() })).query(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
     return getStructuredMechanics(input.elementId);
+  }),
+  structuredWeaponTechniqueLinks: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive() })).query(async ({ ctx, input }) => {
+    await assertOwner(input.homebrewId, ctx.user.id);
+    return listWeaponTechniqueLinks(input.homebrewId);
+  }),
+  structuredWeaponTechniqueLinkCreate: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), weaponElementId: z2.number().int().positive(), techniqueElementId: z2.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    await assertOwner(input.homebrewId, ctx.user.id);
+    return createWeaponTechniqueLink(input);
+  }),
+  structuredWeaponTechniqueLinkDelete: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), id: z2.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    await assertOwner(input.homebrewId, ctx.user.id);
+    return deleteWeaponTechniqueLink(input.homebrewId, input.id);
+  }),
+  structuredWeaponTechniqueLinkUpdate: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), id: z2.number().int().positive(), weaponElementId: z2.number().int().positive(), techniqueElementId: z2.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    await assertOwner(input.homebrewId, ctx.user.id);
+    return updateWeaponTechniqueLink(input);
   }),
   structuredSaveExtendedMechanics: protectedProcedure.input(z2.object({
     homebrewId: z2.number().int().positive(),

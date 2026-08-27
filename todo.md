@@ -79,12 +79,20 @@
 - [x] Auditar o schema e o editor atuais contra a especificação estruturada de Origem, Mecânicas, Votos, Técnicas, Armas e relações.
 - [x] Modelar entidades mecânicas estruturadas para bônus, requisitos, custos, dano, alcance, condições e efeitos, preservando o modo manual e a origem da regra.
 - [x] Criar relações persistentes entre Armas e Técnicas e associar elementos estruturados aos módulos Homebrew.
-- [ ] Implementar editores por módulo com listas adicionáveis, editáveis, removíveis e reordenáveis, sem transformar os dados em texto único.
+- [x] Implementar editores por módulo com listas adicionáveis, editáveis, removíveis e reordenáveis, sem transformar os dados em texto único.
 - [x] Integrar painel inicial de elementos estruturados com criação e exclusão no editor modular.
 - [ ] Implementar editores específicos de Origem, Votos, Técnicas, Armas, Mecânicas, Aptidões e Especializações com campos próprios.
-- [ ] Adicionar UI completa para coleções filhas de requisitos, bônus, efeitos, custos, dano, alcance, condições, evoluções e vínculos arma–técnica.
-- [ ] Cobrir CRUD e reordenação dos editores modulares com testes de frontend/backend.
-- [ ] Implementar validações automáticas de requisitos, custos, dano, condições, bônus e evoluções sem inventar regras ausentes no livro.
+- [x] Adicionar UI completa para coleções filhas de requisitos, bônus, efeitos, custos, dano, alcance, condições, evoluções e vínculos arma–técnica.
+- [x] Implementar edição completa por item para todos os campos das coleções mecânicas, sem depender de `window.prompt`.
+- [x] Limitar controles de reordenação às coleções que possuem `position` persistida; bônus, perfis de dano e alcances permanecem editáveis/removíveis sem falsa garantia de ordem.
+- [x] Adicionar manutenção individual equivalente para vínculos Arma–Técnica.
+- [x] Permitir selecionar qualquer elemento estruturado como alvo das coleções filhas, em vez de usar apenas o primeiro elemento.
+- [x] Listar, editar e remover individualmente todos os itens mecânicos, reordenando somente os grupos com posição persistida.
+- [ ] Cobrir com testes de interação de frontend a seleção de elemento e a manutenção individual das coleções filhas.
+- [x] Cobrir as invariantes de seleção/manutenção por testes estáticos e contratos tRPC.
+- [ ] Cobrir CRUD e reordenação dos editores modulares com testes de frontend e backend completos.
+- [x] Cobrir os contratos backend e invariantes estáticos disponíveis do editor modular.
+- [x] Implementar validações automáticas de requisitos, custos, dano, condições, bônus e evoluções sem inventar regras ausentes no livro.
 - [x] Preservar imagens opcionais por URL ou Cloudinary para Homebrew e elementos compatíveis.
 - [x] Atualizar a ficha compartilhável e a pré-visualização para exibir dados mecânicos, regras oficiais e configurações manuais.
 - [x] Criar migrations Drizzle revisadas para as novas entidades e relações, aplicando-as no TiDB Cloud.

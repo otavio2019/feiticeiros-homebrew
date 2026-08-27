@@ -19,4 +19,12 @@ describe("structured builder migration", () => {
     expect(migration).not.toMatch(/CONSTRAINT `[^`]{65,}`/);
     expect(migration).not.toMatch(/^ALTER TABLE .* ADD CONSTRAINT /m);
   });
+
+  it("usa formulário completo para editar coleções filhas", () => {
+    const source = fs.readFileSync(path.resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
+    expect(source).not.toContain("window.prompt");
+    expect(source).toContain("childEditorFields");
+    expect(source).toContain("Salvar item");
+    expect(source).toContain("structuredWeaponTechniqueLinkUpdate");
+  });
 });
