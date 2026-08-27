@@ -463,8 +463,16 @@ async function upsertUser(user) {
 async function getUserByEmail(email) {
   const database = await getDb();
   if (!database) return void 0;
-  const result = await database.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
-  return result[0];
+  try {
+    const result = await database.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
+    return result[0];
+  } catch (error) {
+    if (String(error?.message ?? "").toLowerCase().includes("normalizedemail")) {
+      const result = await database.select().from(users).where(eq(users.email, email)).limit(1);
+      return result[0];
+    }
+    throw error;
+  }
 }
 async function createLocalUser(input) {
   const database = await getDb();
@@ -1313,7 +1321,14 @@ var appRouter = router({
     }),
     login: publicProcedure.input(credentialsSchema).mutation(async ({ input, ctx }) => {
       const user = await getUserByEmail(input.email);
-      if (!user?.passwordHash || !await verifyPassword(input.password, user.passwordHash)) {
+      if (!user) throw new Error("E-mail ou senha inv\xE1lidos.");
+      if (!user.passwordHash) {
+        if (user.loginMethod === "google") {
+          throw new Error("Esta conta foi criada via Google. Use 'Esqueci minha senha' para definir uma senha local.");
+        }
+        throw new Error("E-mail ou senha inv\xE1lidos.");
+      }
+      if (!await verifyPassword(input.password, user.passwordHash)) {
         throw new Error("E-mail ou senha inv\xE1lidos.");
       }
       setSessionCookie(ctx, await sdk.createSession(user.id));

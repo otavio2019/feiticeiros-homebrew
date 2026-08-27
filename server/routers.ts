@@ -39,9 +39,19 @@ export const appRouter = router({
       }),
     login: publicProcedure.input(credentialsSchema).mutation(async ({ input, ctx }) => {
       const user = await db.getUserByEmail(input.email);
-      if (!user?.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) {
+      if (!user) throw new Error("E-mail ou senha inválidos.");
+
+      if (!user.passwordHash) {
+        if (user.loginMethod === "google") {
+          throw new Error("Esta conta foi criada via Google. Use 'Esqueci minha senha' para definir uma senha local.");
+        }
         throw new Error("E-mail ou senha inválidos.");
       }
+
+      if (!(await verifyPassword(input.password, user.passwordHash))) {
+        throw new Error("E-mail ou senha inválidos.");
+      }
+
       setSessionCookie(ctx, await sdk.createSession(user.id));
       return user;
     }),

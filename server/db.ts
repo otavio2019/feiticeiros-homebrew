@@ -74,8 +74,18 @@ export async function getUserById(id: number) {
 export async function getUserByEmail(email: string) {
   const database = await getDb();
   if (!database) return undefined;
-  const result = await database.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
-  return result[0];
+  try {
+    const result = await database.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
+    return result[0];
+  } catch (error: any) {
+    // Fallback para bases que ainda não aplicaram a migration 0002.
+    // A consulta por `email` usa apenas uma coluna presente desde a migration 0000.
+    if (String(error?.message ?? "").toLowerCase().includes("normalizedemail")) {
+      const result = await database.select().from(users).where(eq(users.email, email)).limit(1);
+      return result[0];
+    }
+    throw error;
+  }
 }
 
 export async function createLocalUser(input: { email: string; name: string | null; passwordHash: string }) {
