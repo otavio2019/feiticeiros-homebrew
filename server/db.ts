@@ -25,16 +25,17 @@ import {
 } from "../drizzle/schema";
 import { validateStructuredExtendedMechanics, validateStructuredMechanics, type HomebrewModuleType } from "../shared/homebrewRules";
 import { ENV } from "./_core/env";
-import { getMySqlPoolOptions } from "./database";
+import { getDatabaseUrl, getMySqlPoolOptions } from "./database";
 
 let _pool: Pool | null = null;
 type Database = ReturnType<typeof drizzle<Record<string, never>, Pool>>;
 let _db: Database | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  const databaseUrl = getDatabaseUrl();
+  if (!_db && databaseUrl) {
     try {
-      _pool = createPool(getMySqlPoolOptions(process.env.DATABASE_URL));
+      _pool = createPool(getMySqlPoolOptions(databaseUrl));
       _db = drizzle(_pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);

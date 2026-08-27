@@ -1,5 +1,9 @@
 import type { PoolOptions } from "mysql2/promise";
 
+export function getDatabaseUrl(env: NodeJS.ProcessEnv = process.env) {
+  return env.TIDB_DATABASE_URL ?? env.DATABASE_URL ?? "";
+}
+
 function decode(value: string) {
   return decodeURIComponent(value.replace(/\+/g, "%20"));
 }

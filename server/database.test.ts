@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { getMySqlPoolOptions } from "./database";
+import { getDatabaseUrl, getMySqlPoolOptions } from "./database";
 
 describe("configuração MySQL", () => {
+  it("prioriza TIDB_DATABASE_URL quando ambas as variáveis estão presentes", () => {
+    expect(getDatabaseUrl({ TIDB_DATABASE_URL: "mysql://tidb/app", DATABASE_URL: "mysql://legacy/app" })).toBe("mysql://tidb/app");
+  });
+
+  it("mantém fallback para DATABASE_URL em ambientes legados", () => {
+    expect(getDatabaseUrl({ DATABASE_URL: "mysql://legacy/app" })).toBe("mysql://legacy/app");
+  });
+
   it("aplica TLS e porta padrão TiDB Cloud a uma URL de produção", () => {
     expect(getMySqlPoolOptions("mysql://user:pass@cluster.tidbcloud.com/app")).toMatchObject({
       host: "cluster.tidbcloud.com",

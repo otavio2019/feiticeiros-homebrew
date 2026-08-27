@@ -385,24 +385,10 @@ function validateStructuredExtendedMechanics(input, manualMode = false) {
   return { valid: manualMode || errors.length === 0, errors };
 }
 
-// server/_core/env.ts
-var ENV = {
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  cookieSecret: process.env.SESSION_SECRET ?? process.env.JWT_SECRET ?? "",
-  appUrl: process.env.APP_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
-  isProduction: process.env.NODE_ENV === "production",
-  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME ?? "",
-  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY ?? "",
-  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET ?? "",
-  smtpHost: process.env.SMTP_HOST ?? "",
-  smtpPort: Number(process.env.SMTP_PORT ?? 587),
-  smtpUser: process.env.SMTP_USER ?? "",
-  smtpPassword: process.env.SMTP_PASSWORD ?? "",
-  smtpFrom: process.env.SMTP_FROM ?? ""
-};
-
 // server/database.ts
+function getDatabaseUrl(env = process.env) {
+  return env.TIDB_DATABASE_URL ?? env.DATABASE_URL ?? "";
+}
 function decode(value) {
   return decodeURIComponent(value.replace(/\+/g, "%20"));
 }
@@ -424,13 +410,31 @@ function getMySqlPoolOptions(databaseUrl) {
   };
 }
 
+// server/_core/env.ts
+var ENV = {
+  databaseUrl: getDatabaseUrl(),
+  cookieSecret: process.env.SESSION_SECRET ?? process.env.JWT_SECRET ?? "",
+  appUrl: process.env.APP_URL ?? "",
+  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
+  isProduction: process.env.NODE_ENV === "production",
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME ?? "",
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY ?? "",
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET ?? "",
+  smtpHost: process.env.SMTP_HOST ?? "",
+  smtpPort: Number(process.env.SMTP_PORT ?? 587),
+  smtpUser: process.env.SMTP_USER ?? "",
+  smtpPassword: process.env.SMTP_PASSWORD ?? "",
+  smtpFrom: process.env.SMTP_FROM ?? ""
+};
+
 // server/db.ts
 var _pool = null;
 var _db = null;
 async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  const databaseUrl = getDatabaseUrl();
+  if (!_db && databaseUrl) {
     try {
-      _pool = createPool(getMySqlPoolOptions(process.env.DATABASE_URL));
+      _pool = createPool(getMySqlPoolOptions(databaseUrl));
       _db = drizzle(_pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);

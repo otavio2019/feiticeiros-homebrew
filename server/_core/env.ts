@@ -1,5 +1,7 @@
+import { getDatabaseUrl } from "../database";
+
 export const ENV = {
-  databaseUrl: process.env.DATABASE_URL ?? "",
+  databaseUrl: getDatabaseUrl(),
   cookieSecret: process.env.SESSION_SECRET ?? process.env.JWT_SECRET ?? "",
   appUrl: process.env.APP_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
