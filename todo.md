@@ -85,7 +85,7 @@
 - [ ] Adicionar UI completa para coleções filhas de requisitos, bônus, efeitos, custos, dano, alcance, condições, evoluções e vínculos arma–técnica.
 - [ ] Cobrir CRUD e reordenação dos editores modulares com testes de frontend/backend.
 - [ ] Implementar validações automáticas de requisitos, custos, dano, condições, bônus e evoluções sem inventar regras ausentes no livro.
-- [ ] Preservar imagens opcionais por URL ou Cloudinary para Homebrew e elementos compatíveis.
+- [x] Preservar imagens opcionais por URL ou Cloudinary para Homebrew e elementos compatíveis.
 - [x] Atualizar a ficha compartilhável e a pré-visualização para exibir dados mecânicos, regras oficiais e configurações manuais.
 - [x] Criar migrations Drizzle revisadas para as novas entidades e relações, aplicando-as no TiDB Cloud.
 - [ ] Cobrir a evolução com testes de schema, relações, cálculos, validações, modo manual, CRUD, duplicação e compartilhamento.

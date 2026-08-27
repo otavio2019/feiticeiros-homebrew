@@ -16,6 +16,7 @@ vi.mock("./db", () => ({
   listStructuredElementsForShare: vi.fn(),
   updateStructuredElement: vi.fn(),
   reorderStructuredElement: vi.fn(),
+  replaceStructuredExtendedMechanics: vi.fn(),
 }));
 
 import * as db from "./db";
@@ -95,6 +96,13 @@ describe("fluxos de dados da biblioteca de Homebrews", () => {
     expect(db.updateHomebrew).toHaveBeenCalledWith(7, { title: "Atualizada" });
     expect(db.duplicateHomebrew).toHaveBeenCalledWith(ownHomebrew, 1, expect.any(String));
     expect(db.deleteHomebrew).toHaveBeenCalledWith(7);
+  });
+
+  it("salva coleções mecânicas estendidas do proprietário", async () => {
+    vi.mocked(db.replaceStructuredExtendedMechanics).mockResolvedValue({ elementId: 11 } as never);
+    const caller = appRouter.createCaller(createContext());
+    await caller.homebrew.structuredSaveExtendedMechanics({ homebrewId: 7, elementId: 11, costs: [{ resource: "PE", amount: 2, details: "Custo base" }], damageProfiles: [{ dice: "2d6", modifier: 0, damageType: "energia", details: "Dano direto" }], ranges: [{ range: 12, unit: "metros" }], conditions: [{ name: "Marcado", effect: "Não pode se ocultar." }], evolutions: [{ name: "Aprimoramento", description: "Aumenta o alcance.", isManual: true, ruleSource: "manual" }] });
+    expect(db.replaceStructuredExtendedMechanics).toHaveBeenCalledWith(11, expect.objectContaining({ costs: expect.any(Array), damageProfiles: expect.any(Array), ranges: expect.any(Array), conditions: expect.any(Array), evolutions: expect.any(Array) }));
   });
 
   it("edita e reordena elementos estruturados do proprietário", async () => {

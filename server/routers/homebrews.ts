@@ -178,6 +178,21 @@ export const homebrewRouter = router({
       return db.getStructuredMechanics(input.elementId);
     }),
 
+  structuredSaveExtendedMechanics: protectedProcedure
+    .input(z.object({
+      homebrewId: z.number().int().positive(),
+      elementId: z.number().int().positive(),
+      costs: z.array(z.object({ resource: z.string().trim().min(1).max(64), amount: z.number().int().min(0), details: z.string().trim().min(1) })).optional(),
+      damageProfiles: z.array(z.object({ dice: z.string().trim().min(1).max(32), modifier: z.number().int().optional(), damageType: z.string().trim().min(1).max(64), scaling: z.string().max(255).optional(), details: z.string().trim().min(1) })).optional(),
+      ranges: z.array(z.object({ range: z.number().int().min(0), unit: z.string().trim().min(1).max(32), area: z.string().max(255).optional(), target: z.string().max(255).optional() })).optional(),
+      conditions: z.array(z.object({ name: z.string().trim().min(1).max(120), effect: z.string().trim().min(1), duration: z.string().max(120).optional() })).optional(),
+      evolutions: z.array(z.object({ name: z.string().trim().min(1).max(160), description: z.string().trim().min(1), isManual: z.boolean().optional(), ruleSource: z.enum(["official", "homebrew", "manual"]).optional() })).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      const { homebrewId: _homebrewId, elementId, ...mechanics } = input;
+      return db.replaceStructuredExtendedMechanics(elementId, mechanics);
+    }),
   structuredSaveMechanics: protectedProcedure
     .input(z.object({
       homebrewId: z.number().int().positive(),

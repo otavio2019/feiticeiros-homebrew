@@ -664,7 +664,11 @@ async function removeHomebrewImage(homebrewId, imageId) {
 async function listStructuredElements(homebrewId) {
   const database = await getDb();
   if (!database) return [];
-  return database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, homebrewId)).orderBy(homebrewStructuredElements.position);
+  const elements = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, homebrewId)).orderBy(homebrewStructuredElements.position);
+  return Promise.all(elements.map(async (element) => ({
+    ...element,
+    images: await database.select().from(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.elementId, element.id)))
+  })));
 }
 async function createStructuredElement(input) {
   const database = await getDb();
@@ -692,8 +696,22 @@ async function updateStructuredElement(id, input) {
 async function deleteStructuredElement(id) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indispon\xEDvel.");
-  await database.delete(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id));
-  return { id };
+  const elementRows = await database.select({ homebrewId: homebrewStructuredElements.homebrewId }).from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1);
+  const element = elementRows[0];
+  await database.transaction(async (tx) => {
+    await tx.delete(homebrewImages).where(eq(homebrewImages.elementId, id));
+    await tx.delete(structuredRequirements).where(eq(structuredRequirements.elementId, id));
+    await tx.delete(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, id));
+    await tx.delete(structuredEffects).where(eq(structuredEffects.elementId, id));
+    await tx.delete(structuredCosts).where(eq(structuredCosts.elementId, id));
+    await tx.delete(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, id));
+    await tx.delete(structuredRanges).where(eq(structuredRanges.elementId, id));
+    await tx.delete(structuredConditions).where(eq(structuredConditions.elementId, id));
+    await tx.delete(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, id));
+    await tx.delete(structuredEvolutions).where(eq(structuredEvolutions.elementId, id));
+    await tx.delete(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id));
+  });
+  return { id, homebrewId: element?.homebrewId };
 }
 async function replaceStructuredMechanics(elementId, input) {
   const database = await getDb();
@@ -713,19 +731,24 @@ async function replaceStructuredMechanics(elementId, input) {
 async function getStructuredMechanics(elementId) {
   const database = await getDb();
   if (!database) return { requirements: [], attributeBonuses: [], effects: [] };
-  const [requirements, attributeBonuses, effects] = await Promise.all([
+  const [requirements, attributeBonuses, effects, costs, damageProfiles, ranges, conditions, evolutions] = await Promise.all([
     database.select().from(structuredRequirements).where(eq(structuredRequirements.elementId, elementId)).orderBy(structuredRequirements.position),
     database.select().from(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, elementId)),
-    database.select().from(structuredEffects).where(eq(structuredEffects.elementId, elementId)).orderBy(structuredEffects.position)
+    database.select().from(structuredEffects).where(eq(structuredEffects.elementId, elementId)).orderBy(structuredEffects.position),
+    database.select().from(structuredCosts).where(eq(structuredCosts.elementId, elementId)).orderBy(structuredCosts.position),
+    database.select().from(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, elementId)),
+    database.select().from(structuredRanges).where(eq(structuredRanges.elementId, elementId)),
+    database.select().from(structuredConditions).where(eq(structuredConditions.elementId, elementId)).orderBy(structuredConditions.position),
+    database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, elementId)).orderBy(structuredEvolutions.position)
   ]);
-  return { requirements, attributeBonuses, effects };
+  return { requirements, attributeBonuses, effects, costs, damageProfiles, ranges, conditions, evolutions };
 }
 async function listStructuredElementsForShare(homebrewId) {
   const database = await getDb();
   if (!database) return [];
   const elements = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, homebrewId)).orderBy(homebrewStructuredElements.position);
   return Promise.all(elements.map(async (element) => {
-    const [attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions] = await Promise.all([
+    const [attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions, images] = await Promise.all([
       database.select().from(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, element.id)),
       database.select().from(structuredRequirements).where(eq(structuredRequirements.elementId, element.id)).orderBy(structuredRequirements.position),
       database.select().from(structuredEffects).where(eq(structuredEffects.elementId, element.id)).orderBy(structuredEffects.position),
@@ -734,9 +757,10 @@ async function listStructuredElementsForShare(homebrewId) {
       database.select().from(structuredRanges).where(eq(structuredRanges.elementId, element.id)),
       database.select().from(structuredConditions).where(eq(structuredConditions.elementId, element.id)).orderBy(structuredConditions.position),
       database.select().from(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, element.id)).orderBy(structuredVowExchanges.position),
-      database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, element.id)).orderBy(structuredEvolutions.position)
+      database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, element.id)).orderBy(structuredEvolutions.position),
+      database.select().from(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.elementId, element.id)))
     ]);
-    return { ...element, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions } };
+    return { ...element, images, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions } };
   }));
 }
 async function reorderStructuredElement(id, direction) {
@@ -755,6 +779,23 @@ async function reorderStructuredElement(id, direction) {
     await tx.update(homebrewStructuredElements).set({ position: current.position }).where(eq(homebrewStructuredElements.id, target.id));
   });
   return (await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1))[0];
+}
+async function replaceStructuredExtendedMechanics(elementId, input) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  await database.transaction(async (tx) => {
+    await tx.delete(structuredCosts).where(eq(structuredCosts.elementId, elementId));
+    await tx.delete(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, elementId));
+    await tx.delete(structuredRanges).where(eq(structuredRanges.elementId, elementId));
+    await tx.delete(structuredConditions).where(eq(structuredConditions.elementId, elementId));
+    await tx.delete(structuredEvolutions).where(eq(structuredEvolutions.elementId, elementId));
+    if (input.costs?.length) await tx.insert(structuredCosts).values(input.costs.map((item, position) => ({ elementId, resource: item.resource, amount: item.amount, details: item.details, position })));
+    if (input.damageProfiles?.length) await tx.insert(structuredDamageProfiles).values(input.damageProfiles.map((item) => ({ elementId, dice: item.dice, modifier: item.modifier ?? 0, damageType: item.damageType, scaling: item.scaling ?? "", details: item.details })));
+    if (input.ranges?.length) await tx.insert(structuredRanges).values(input.ranges.map((item) => ({ elementId, range: item.range, unit: item.unit, area: item.area ?? "", target: item.target ?? "" })));
+    if (input.conditions?.length) await tx.insert(structuredConditions).values(input.conditions.map((item, position) => ({ elementId, name: item.name, effect: item.effect, duration: item.duration ?? "", position })));
+    if (input.evolutions?.length) await tx.insert(structuredEvolutions).values(input.evolutions.map((item, position) => ({ elementId, name: item.name, description: item.description, position, isManual: item.isManual ?? false, ruleSource: item.ruleSource ?? "homebrew" })));
+  });
+  return { elementId };
 }
 
 // server/_core/cookies.ts
@@ -1095,6 +1136,19 @@ var homebrewRouter = router({
   structuredMechanics: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), elementId: z2.number().int().positive() })).query(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
     return getStructuredMechanics(input.elementId);
+  }),
+  structuredSaveExtendedMechanics: protectedProcedure.input(z2.object({
+    homebrewId: z2.number().int().positive(),
+    elementId: z2.number().int().positive(),
+    costs: z2.array(z2.object({ resource: z2.string().trim().min(1).max(64), amount: z2.number().int().min(0), details: z2.string().trim().min(1) })).optional(),
+    damageProfiles: z2.array(z2.object({ dice: z2.string().trim().min(1).max(32), modifier: z2.number().int().optional(), damageType: z2.string().trim().min(1).max(64), scaling: z2.string().max(255).optional(), details: z2.string().trim().min(1) })).optional(),
+    ranges: z2.array(z2.object({ range: z2.number().int().min(0), unit: z2.string().trim().min(1).max(32), area: z2.string().max(255).optional(), target: z2.string().max(255).optional() })).optional(),
+    conditions: z2.array(z2.object({ name: z2.string().trim().min(1).max(120), effect: z2.string().trim().min(1), duration: z2.string().max(120).optional() })).optional(),
+    evolutions: z2.array(z2.object({ name: z2.string().trim().min(1).max(160), description: z2.string().trim().min(1), isManual: z2.boolean().optional(), ruleSource: z2.enum(["official", "homebrew", "manual"]).optional() })).optional()
+  })).mutation(async ({ ctx, input }) => {
+    await assertOwner(input.homebrewId, ctx.user.id);
+    const { homebrewId: _homebrewId, elementId, ...mechanics } = input;
+    return replaceStructuredExtendedMechanics(elementId, mechanics);
   }),
   structuredSaveMechanics: protectedProcedure.input(z2.object({
     homebrewId: z2.number().int().positive(),

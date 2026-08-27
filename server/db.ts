@@ -366,9 +366,13 @@ export async function removeHomebrewImage(homebrewId: number, imageId: number) {
 export async function listStructuredElements(homebrewId: number) {
   const database = await getDb();
   if (!database) return [];
-  return database.select().from(homebrewStructuredElements)
+  const elements = await database.select().from(homebrewStructuredElements)
     .where(eq(homebrewStructuredElements.homebrewId, homebrewId))
     .orderBy(homebrewStructuredElements.position);
+  return Promise.all(elements.map(async element => ({
+    ...element,
+    images: await database.select().from(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.elementId, element.id))),
+  })));
 }
 
 export async function createStructuredElement(input: {
@@ -414,8 +418,22 @@ export async function updateStructuredElement(id: number, input: Partial<{
 export async function deleteStructuredElement(id: number) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indisponível.");
-  await database.delete(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id));
-  return { id };
+  const elementRows = await database.select({ homebrewId: homebrewStructuredElements.homebrewId }).from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1);
+  const element = elementRows[0];
+  await database.transaction(async tx => {
+    await tx.delete(homebrewImages).where(eq(homebrewImages.elementId, id));
+    await tx.delete(structuredRequirements).where(eq(structuredRequirements.elementId, id));
+    await tx.delete(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, id));
+    await tx.delete(structuredEffects).where(eq(structuredEffects.elementId, id));
+    await tx.delete(structuredCosts).where(eq(structuredCosts.elementId, id));
+    await tx.delete(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, id));
+    await tx.delete(structuredRanges).where(eq(structuredRanges.elementId, id));
+    await tx.delete(structuredConditions).where(eq(structuredConditions.elementId, id));
+    await tx.delete(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, id));
+    await tx.delete(structuredEvolutions).where(eq(structuredEvolutions.elementId, id));
+    await tx.delete(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id));
+  });
+  return { id, homebrewId: element?.homebrewId };
 }
 
 export async function replaceStructuredMechanics(elementId: number, input: {
@@ -441,12 +459,17 @@ export async function replaceStructuredMechanics(elementId: number, input: {
 export async function getStructuredMechanics(elementId: number) {
   const database = await getDb();
   if (!database) return { requirements: [], attributeBonuses: [], effects: [] };
-  const [requirements, attributeBonuses, effects] = await Promise.all([
+  const [requirements, attributeBonuses, effects, costs, damageProfiles, ranges, conditions, evolutions] = await Promise.all([
     database.select().from(structuredRequirements).where(eq(structuredRequirements.elementId, elementId)).orderBy(structuredRequirements.position),
     database.select().from(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, elementId)),
     database.select().from(structuredEffects).where(eq(structuredEffects.elementId, elementId)).orderBy(structuredEffects.position),
+    database.select().from(structuredCosts).where(eq(structuredCosts.elementId, elementId)).orderBy(structuredCosts.position),
+    database.select().from(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, elementId)),
+    database.select().from(structuredRanges).where(eq(structuredRanges.elementId, elementId)),
+    database.select().from(structuredConditions).where(eq(structuredConditions.elementId, elementId)).orderBy(structuredConditions.position),
+    database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, elementId)).orderBy(structuredEvolutions.position),
   ]);
-  return { requirements, attributeBonuses, effects };
+  return { requirements, attributeBonuses, effects, costs, damageProfiles, ranges, conditions, evolutions };
 }
 
 export async function createWeaponTechniqueLink(input: { homebrewId: number; weaponElementId: number; techniqueElementId: number }) {
@@ -464,7 +487,7 @@ export async function listStructuredElementsForShare(homebrewId: number) {
     .where(eq(homebrewStructuredElements.homebrewId, homebrewId))
     .orderBy(homebrewStructuredElements.position);
   return Promise.all(elements.map(async element => {
-    const [attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions] = await Promise.all([
+    const [attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions, images] = await Promise.all([
       database.select().from(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, element.id)),
       database.select().from(structuredRequirements).where(eq(structuredRequirements.elementId, element.id)).orderBy(structuredRequirements.position),
       database.select().from(structuredEffects).where(eq(structuredEffects.elementId, element.id)).orderBy(structuredEffects.position),
@@ -474,8 +497,9 @@ export async function listStructuredElementsForShare(homebrewId: number) {
       database.select().from(structuredConditions).where(eq(structuredConditions.elementId, element.id)).orderBy(structuredConditions.position),
       database.select().from(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, element.id)).orderBy(structuredVowExchanges.position),
       database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, element.id)).orderBy(structuredEvolutions.position),
+      database.select().from(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.elementId, element.id))),
     ]);
-    return { ...element, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions } };
+    return { ...element, images, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions } };
   }));
 }
 
@@ -496,4 +520,29 @@ export async function reorderStructuredElement(id: number, direction: "up" | "do
     await tx.update(homebrewStructuredElements).set({ position: current.position }).where(eq(homebrewStructuredElements.id, target.id));
   });
   return (await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1))[0];
+}
+
+
+export async function replaceStructuredExtendedMechanics(elementId: number, input: {
+  costs?: Array<{ resource: string; amount: number; details: string }>;
+  damageProfiles?: Array<{ dice: string; modifier?: number; damageType: string; scaling?: string; details: string }>;
+  ranges?: Array<{ range: number; unit: string; area?: string; target?: string }>;
+  conditions?: Array<{ name: string; effect: string; duration?: string }>;
+  evolutions?: Array<{ name: string; description: string; isManual?: boolean; ruleSource?: "official" | "homebrew" | "manual" }>;
+}) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  await database.transaction(async tx => {
+    await tx.delete(structuredCosts).where(eq(structuredCosts.elementId, elementId));
+    await tx.delete(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, elementId));
+    await tx.delete(structuredRanges).where(eq(structuredRanges.elementId, elementId));
+    await tx.delete(structuredConditions).where(eq(structuredConditions.elementId, elementId));
+    await tx.delete(structuredEvolutions).where(eq(structuredEvolutions.elementId, elementId));
+    if (input.costs?.length) await tx.insert(structuredCosts).values(input.costs.map((item, position) => ({ elementId, resource: item.resource, amount: item.amount, details: item.details, position })));
+    if (input.damageProfiles?.length) await tx.insert(structuredDamageProfiles).values(input.damageProfiles.map(item => ({ elementId, dice: item.dice, modifier: item.modifier ?? 0, damageType: item.damageType, scaling: item.scaling ?? "", details: item.details })));
+    if (input.ranges?.length) await tx.insert(structuredRanges).values(input.ranges.map(item => ({ elementId, range: item.range, unit: item.unit, area: item.area ?? "", target: item.target ?? "" })));
+    if (input.conditions?.length) await tx.insert(structuredConditions).values(input.conditions.map((item, position) => ({ elementId, name: item.name, effect: item.effect, duration: item.duration ?? "", position })));
+    if (input.evolutions?.length) await tx.insert(structuredEvolutions).values(input.evolutions.map((item, position) => ({ elementId, name: item.name, description: item.description, position, isManual: item.isManual ?? false, ruleSource: item.ruleSource ?? "homebrew" })));
+  });
+  return { elementId };
 }
