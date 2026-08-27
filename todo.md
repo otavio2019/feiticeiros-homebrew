@@ -112,3 +112,7 @@
 
 - [ ] Diagnosticar e corrigir a sessão que não permanece após login na produção Vercel, incluindo cookie HTTPS, domínio e leitura no endpoint `auth.me`.
 - [ ] Validar login persistido e logout no navegador de produção após a correção.
+
+- [x] Auditar o schema completo do TiDB `homebrew_forge` contra Drizzle, aplicar a sequência integral de migrations apenas se houver divergência e validar `SELECT id, email FROM users LIMIT 1`.
+
+- [ ] Confirmar e alinhar o DSN do banco de produção Vercel com o cluster TiDB que contém a tabela `users` e as migrations aplicadas; a consulta mínima `id,email` ainda falha.
