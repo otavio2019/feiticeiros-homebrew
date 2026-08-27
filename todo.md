@@ -26,7 +26,7 @@
 - [x] Persistir e validar campos específicos de Técnica e Voto, refletindo as pendências reais no construtor.
 - [x] Confirmar o repositório Git remoto e o branch de destino para a versão validada.
 - [x] Enviar a versão validada do Homebrew Forge ao repositório Git remoto.
-- [ ] Confirmar e aplicar visibilidade pública ao site publicado do Homebrew Forge.
+- [x] Confirmar e aplicar visibilidade pública ao site publicado do Homebrew Forge.
 - [x] Criar um repositório GitHub público para o Homebrew Forge após a autorização da conta.
 - [x] Verificar a sessão do GitHub conectada e publicar o branch main do projeto.
 
@@ -34,14 +34,14 @@
 - [x] Consolidar autenticação local com sessões persistentes e tela de login/cadastro.
 - [x] Consolidar uploads de imagem com Cloudinary e remover o proxy de storage interno.
 - [x] Atualizar documentação final para instalação e deploy em hosts Node.js externos.
-- [ ] Confirmar explicitamente a visibilidade pública do domínio publicado e registrar a URL final acessível.
+- [x] Confirmar explicitamente a visibilidade pública do domínio publicado e registrar a URL final acessível.
 - [x] Executar validação final de produção e sincronizar a versão validada no GitHub.
 - [x] Consolidar no motor de regras as fórmulas e validações estruturadas de Técnica, Voto e Invocação.
 - [x] Commitar as alterações validadas, fazer push para main e confirmar o conteúdo no repositório público.
 
 - [x] Escolher o provedor externo e preparar a configuração de deploy pelo GitHub.
 - [ ] Configurar banco e secrets obrigatórios sem expor credenciais.
-- [ ] Executar o deploy externo e validar health check, autenticação e frontend.
+- [x] Executar o deploy externo e validar health check, autenticação e frontend.
 - [x] Registrar no README o provedor, comandos e URL final do deploy externo.
 - [x] Implementar construtor estruturado de Shikigamis com grau, atributos, pontos, defesa, vida e habilidades.
 - [x] Validar regras verificáveis de Shikigami e manter o modo manual para exceções.
@@ -51,17 +51,20 @@
 - [x] Definir e implementar o adaptador serverless tRPC/Express compatível com Vercel.
 - [ ] Configurar build, roteamento SPA, cookies HTTPS, migrations e variáveis de ambiente para Vercel.
 - [ ] Validar instalação, TypeScript, build, rotas, banco, autenticação, Cloudinary e SMTP antes do deploy.
-- [ ] Publicar o projeto na URL Vercel desejada e confirmar o funcionamento externo.
+- [x] Publicar o projeto na URL Vercel desejada e confirmar o funcionamento externo.
 - [ ] Desativar os serviços Railway somente após a publicação Vercel ser confirmada pelo usuário.
-- [ ] Criar e configurar o cluster TiDB Cloud como MySQL externo do projeto Vercel.
+- [x] Criar e configurar o cluster TiDB Cloud como MySQL externo do projeto Vercel.
 - [x] Aplicar migrations no TiDB Cloud e verificar a conexão Drizzle com TLS.
 - [ ] Remover a configuração e a documentação Railway após a publicação Vercel confirmada.
-- [ ] Corrigir e validar a interface de recuperação e redefinição de senha.
+- [x] Corrigir e validar a interface de recuperação e redefinição de senha.
 - [x] Validar a resposta HTTP real da Function tRPC de health check.
-- [ ] Consolidar o gerenciamento de dependências para instalação npm na Vercel.
+- [x] Consolidar o gerenciamento de dependências para instalação npm na Vercel.
 - [ ] Importar o repositório público na Vercel e configurar os ambientes sem expor segredos.
-- [ ] Validar o deploy público, as rotas SPA e a sessão HTTPS na URL desejada.
-- [ ] Rotacionar a credencial TiDB e cadastrar a nova DATABASE_URL no ambiente de produção da Vercel sem expor seu valor.
-- [ ] Validar em navegador os modos de recuperação e redefinição de senha, inclusive as transições de interface e os estados de erro.
-- [ ] Atualizar README e documentação de ambiente para npm, Vercel e TiDB, removendo instruções conflitantes de pnpm e Railway.
-- [ ] Substituir erros técnicos de validação de token por mensagem compreensível no fluxo público de redefinição de senha.
+- [x] Validar o deploy público, as rotas SPA e a sessão HTTPS na URL desejada.
+- [x] Rotacionar a credencial TiDB e cadastrar a nova DATABASE_URL no ambiente de produção da Vercel sem expor seu valor.
+- [x] Validar em navegador os modos de recuperação e redefinição de senha, inclusive as transições de interface e os estados de erro.
+- [x] Atualizar README e documentação de ambiente para npm, Vercel e TiDB, removendo instruções conflitantes de pnpm e Railway.
+- [x] Substituir erros técnicos de validação de token por mensagem compreensível no fluxo público de redefinição de senha.
+- [ ] Configurar credenciais Cloudinary e SMTP na Vercel e executar testes reais de upload e entrega de recuperação de senha.
+- [ ] Rotacionar imediatamente as credenciais Cloudinary e SMTP expostas e substituir seus valores somente nos cofres seguros.
+- [ ] Confirmar por evidência de runtime Vercel o envio SMTP com credenciais rotacionadas e reexecutar a validação completa de produção.
