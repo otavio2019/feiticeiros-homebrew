@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
 import { createServer } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createApp } from "./app";
+import { createApp, getDatabaseErrorSummary } from "./app";
 
 describe("createApp", () => {
   let server: Server;
@@ -25,5 +25,25 @@ describe("createApp", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ result: { data: { json: { ok: true } } } });
+  });
+});
+
+describe("getDatabaseErrorSummary", () => {
+  it("preserva o diagnóstico do driver e remove e-mails e URLs de conexão", () => {
+    const error = {
+      cause: {
+        code: "ER_NO_SUCH_TABLE",
+        errno: 1146,
+        sqlState: "42S02",
+        sqlMessage: "Table 'homebrew_forge.users' doesn't exist for otavio@example.com via mysql://user:secret@host/db",
+      },
+    };
+
+    expect(getDatabaseErrorSummary(error)).toEqual({
+      driverCode: "ER_NO_SUCH_TABLE",
+      driverErrno: 1146,
+      driverSqlState: "42S02",
+      driverMessage: "Table 'homebrew_forge.users' doesn't exist for [email-redacted] via [connection-url-redacted]",
+    });
   });
 });

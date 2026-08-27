@@ -1388,6 +1388,28 @@ async function createContext(opts) {
 }
 
 // server/app.ts
+function findDriverError(error, depth = 0) {
+  if (!error || typeof error !== "object" || depth > 3) return void 0;
+  const record = error;
+  if (typeof record.errno === "number" || typeof record.sqlState === "string" || typeof record.sqlMessage === "string") {
+    return record;
+  }
+  return findDriverError(record.cause, depth + 1);
+}
+function sanitizeDriverMessage(value) {
+  if (typeof value !== "string") return void 0;
+  return value.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email-redacted]").replace(/\b(?:mysql|postgres(?:ql)?):\/\/[^\s]+/gi, "[connection-url-redacted]").slice(0, 500);
+}
+function getDatabaseErrorSummary(error) {
+  const driverError = findDriverError(error);
+  if (!driverError) return void 0;
+  return {
+    driverCode: typeof driverError.code === "string" ? driverError.code : void 0,
+    driverErrno: typeof driverError.errno === "number" ? driverError.errno : void 0,
+    driverSqlState: typeof driverError.sqlState === "string" ? driverError.sqlState : void 0,
+    driverMessage: sanitizeDriverMessage(driverError.sqlMessage ?? driverError.message)
+  };
+}
 function createApp() {
   const app2 = express();
   app2.set("trust proxy", 1);
@@ -1397,7 +1419,13 @@ function createApp() {
     "/api/trpc",
     createExpressMiddleware({
       router: appRouter,
-      createContext
+      createContext,
+      onError({ error, path, type }) {
+        const databaseError = getDatabaseErrorSummary(error);
+        if (databaseError) {
+          console.error("[Database Query Error]", JSON.stringify({ path, type, ...databaseError }));
+        }
+      }
     })
   );
   return app2;

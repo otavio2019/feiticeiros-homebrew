@@ -116,3 +116,4 @@
 - [x] Auditar o schema completo do TiDB `homebrew_forge` contra Drizzle, aplicar a sequência integral de migrations apenas se houver divergência e validar `SELECT id, email FROM users LIMIT 1`.
 
 - [ ] Confirmar e alinhar o DSN do banco de produção Vercel com o cluster TiDB que contém a tabela `users` e as migrations aplicadas; a consulta mínima `id,email` ainda falha.
+- [ ] Registrar e revisar no runtime Vercel o código e a mensagem segura do driver MySQL por trás da falha de `auth.login`, sem registrar e-mail, query completa ou credenciais.
