@@ -117,7 +117,7 @@
 - [x] Auditar o schema completo do TiDB `homebrew_forge` contra Drizzle, aplicar a sequência integral de migrations apenas se houver divergência e validar `SELECT id, email FROM users LIMIT 1`.
 
 - [x] Confirmar e alinhar o DSN do banco de produção Vercel com o cluster TiDB que contém a tabela `users` e as migrations aplicadas; a consulta mínima `id,email` ainda falha.
-- [ ] Republicar a telemetria sanitizada da Function Vercel e confirmar no runtime que erros de banco não registram usuário, IP, e-mail, query completa ou URL de conexão.
+- [ ] Concluir a regressão de telemetria sanitizada para usuário, IP, e-mail, query completa e URL de conexão e publicar a versão atual na Vercel sem induzir falha artificial no runtime saudável.
 
 - [x] Corrigir a credencial de `TIDB_DATABASE_URL` na Vercel: o log confirmou `ER_ACCESS_DENIED_ERROR` (1045/28000), não divergência de schema.
 

@@ -46,4 +46,19 @@ describe("getDatabaseErrorSummary", () => {
       driverMessage: "Access denied for database user [redacted] with [email-redacted] via [connection-url-redacted]",
     });
   });
+
+  it("remove consultas SQL completas que possam acompanhar a mensagem do driver", () => {
+    const summary = getDatabaseErrorSummary({
+      cause: {
+        code: "ER_BAD_FIELD_ERROR",
+        errno: 1054,
+        sqlState: "42S22",
+        sqlMessage: "Unknown column 'users.email' in field list. SELECT id, email FROM users WHERE email = 'otavio@example.com'",
+      },
+    });
+
+    expect(summary?.driverMessage).toBe("Unknown column 'users.email' in field list[sql-redacted]");
+    expect(summary?.driverMessage).not.toContain("SELECT id");
+    expect(summary?.driverMessage).not.toContain("otavio@example.com");
+  });
 });
