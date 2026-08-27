@@ -14,6 +14,8 @@ vi.mock("./db", () => ({
   removeHomebrewImage: vi.fn(),
   listStructuredElements: vi.fn(),
   listStructuredElementsForShare: vi.fn(),
+  updateStructuredElement: vi.fn(),
+  reorderStructuredElement: vi.fn(),
 }));
 
 import * as db from "./db";
@@ -93,6 +95,16 @@ describe("fluxos de dados da biblioteca de Homebrews", () => {
     expect(db.updateHomebrew).toHaveBeenCalledWith(7, { title: "Atualizada" });
     expect(db.duplicateHomebrew).toHaveBeenCalledWith(ownHomebrew, 1, expect.any(String));
     expect(db.deleteHomebrew).toHaveBeenCalledWith(7);
+  });
+
+  it("edita e reordena elementos estruturados do proprietário", async () => {
+    vi.mocked(db.updateStructuredElement).mockResolvedValue({ id: 11, name: "Atualizado" } as never);
+    vi.mocked(db.reorderStructuredElement).mockResolvedValue({ id: 11, position: 1 } as never);
+    const caller = appRouter.createCaller(createContext());
+    await caller.homebrew.structuredUpdate({ homebrewId: 7, id: 11, name: "Atualizado" });
+    await caller.homebrew.structuredReorder({ homebrewId: 7, id: 11, direction: "down" });
+    expect(db.updateStructuredElement).toHaveBeenCalledWith(11, { name: "Atualizado" });
+    expect(db.reorderStructuredElement).toHaveBeenCalledWith(11, "down");
   });
 
   it("entrega uma Homebrew não privada na leitura compartilhável", async () => {
