@@ -23,7 +23,7 @@ import {
   structuredEvolutions,
   structuredWeaponTechniqueLinks,
 } from "../drizzle/schema";
-import type { HomebrewModuleType } from "../shared/homebrewRules";
+import { validateStructuredMechanics, type HomebrewModuleType } from "../shared/homebrewRules";
 import { ENV } from "./_core/env";
 import { getMySqlPoolOptions } from "./database";
 
@@ -425,6 +425,8 @@ export async function replaceStructuredMechanics(elementId: number, input: {
 }) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indisponível.");
+  const validation = validateStructuredMechanics(input);
+  if (!validation.valid) throw new Error(`Dados mecânicos inválidos: ${validation.errors.join(" ")}`);
   await database.transaction(async tx => {
     await tx.delete(structuredRequirements).where(eq(structuredRequirements.elementId, elementId));
     await tx.delete(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, elementId));

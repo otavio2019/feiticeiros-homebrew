@@ -175,3 +175,29 @@ export function buildHomebrewValidation(
 
   return base;
 }
+
+
+export type StructuredMechanicsValidation = {
+  valid: boolean;
+  errors: string[];
+};
+
+export function validateStructuredMechanics(input: {
+  requirements?: Array<{ type: string; valueText?: string | null; valueNumber?: number | null }>;
+  attributeBonuses?: Array<{ attribute: string; value: number }>;
+  effects?: Array<{ description: string; valueNumber?: number | null }>;
+}, manualMode = false): StructuredMechanicsValidation {
+  const errors: string[] = [];
+  for (const requirement of input.requirements ?? []) {
+    if (!requirement.type.trim()) errors.push("Requisito sem tipo.");
+    if (requirement.valueText == null && requirement.valueNumber == null) errors.push("Requisito sem valor.");
+  }
+  for (const bonus of input.attributeBonuses ?? []) {
+    if (!bonus.attribute.trim()) errors.push("Bônus sem atributo.");
+    if (!Number.isInteger(bonus.value)) errors.push("Bônus com valor inválido.");
+  }
+  for (const effect of input.effects ?? []) {
+    if (!effect.description.trim()) errors.push("Efeito sem descrição.");
+  }
+  return { valid: manualMode || errors.length === 0, errors };
+}

@@ -9,6 +9,7 @@ import {
   calculateTechniqueDifficulty,
   isVowCombinationAllowed,
   SPELL_COST_BY_LEVEL,
+  validateStructuredMechanics,
 } from "../shared/homebrewRules";
 
 describe("regras estruturadas de Homebrew", () => {
@@ -69,6 +70,12 @@ describe("regras estruturadas de Homebrew", () => {
       techniqueCost: 2,
     });
     expect(complete.every(item => item.valid)).toBe(true);
+  });
+
+  it("valida mecânicas estruturadas sem presumir regras não documentadas", () => {
+    expect(validateStructuredMechanics({ requirements: [{ type: "atributo", valueNumber: 3 }], attributeBonuses: [{ attribute: "forca", value: 2 }], effects: [{ description: "Aplica condição." }] }).valid).toBe(true);
+    expect(validateStructuredMechanics({ requirements: [{ type: "", valueText: null }] }).valid).toBe(false);
+    expect(validateStructuredMechanics({ requirements: [{ type: "", valueText: null }] }, true).valid).toBe(true);
   });
 
   it("valida campos específicos de técnica e voto", () => {
