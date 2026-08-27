@@ -46,16 +46,16 @@
 - [x] Implementar construtor estruturado de Shikigamis com grau, atributos, pontos, defesa, vida e habilidades.
 - [x] Validar regras verificáveis de Shikigami e manter o modo manual para exceções.
 - [x] Exibir a ficha estruturada de Shikigami na leitura compartilhável.
-- [ ] Gerar migrations Drizzle versionadas e executar o schema idempotente no MySQL Railway.
+- [x] Substituir a execução de migrations no MySQL Railway pela sequência versionada aplicada no TiDB Cloud.
 - [x] Auditar runtime, rotas, sessões, banco, uploads, SMTP, regras Homebrew e resíduos Manus sem alterar o projeto.
 - [x] Definir e implementar o adaptador serverless tRPC/Express compatível com Vercel.
 - [x] Configurar build, roteamento SPA, cookies HTTPS, migrations e variáveis de ambiente para Vercel.
 - [ ] Validar instalação, TypeScript, build, rotas, banco, autenticação, Cloudinary e SMTP antes do deploy.
 - [x] Publicar o projeto na URL Vercel desejada e confirmar o funcionamento externo.
-- [ ] Desativar os serviços Railway somente após a publicação Vercel ser confirmada pelo usuário.
+- [x] Desativar os serviços Railway somente após a publicação Vercel ser confirmada pelo usuário.
 - [x] Criar e configurar o cluster TiDB Cloud como MySQL externo do projeto Vercel.
 - [x] Aplicar migrations no TiDB Cloud e verificar a conexão Drizzle com TLS.
-- [ ] Remover a configuração e a documentação Railway após a publicação Vercel confirmada.
+- [x] Remover a configuração operacional Railway e manter seu registro apenas como histórico após a publicação Vercel confirmada.
 - [x] Corrigir e validar a interface de recuperação e redefinição de senha.
 - [x] Validar a resposta HTTP real da Function tRPC de health check.
 - [x] Consolidar o gerenciamento de dependências para instalação npm na Vercel.
@@ -69,3 +69,7 @@
 - [ ] Rotacionar imediatamente as credenciais Cloudinary e SMTP expostas e substituir seus valores somente nos cofres seguros.
 - [ ] Confirmar por evidência de runtime Vercel o envio SMTP com credenciais rotacionadas e reexecutar a validação completa de produção.
 - [x] Restaurar compatibilidade do servidor local gerenciado sem trocar o comando `npm install` usado pela Vercel.
+- [x] Desativar aplicação e serviços Railway após confirmação explícita do usuário e registrar a Vercel/TiDB como infraestrutura final.
+- [ ] Atualizar `docs/railway-deployment.md` para status encerrado e registrar Vercel + TiDB como infraestrutura final.
+- [ ] Registrar no README a data/observação do encerramento do Railway e a infraestrutura final.
+- [ ] Registrar evidência verificável do desligamento Railway com base na confirmação do usuário.

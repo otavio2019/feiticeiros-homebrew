@@ -14,7 +14,7 @@ A aplicação usa React 19, Vite 7, Express 4, tRPC 11, Drizzle ORM, TiDB Cloud 
 
 O deploy de produção é disponibilizado em [https://feiticeiros-homebrew.vercel.app](https://feiticeiros-homebrew.vercel.app). O frontend e a API usam o mesmo domínio, permitindo que cookies de sessão `HttpOnly`, `SameSite=Lax` e `Secure` funcionem sem configuração de CORS adicional.
 
-> O Railway permanece apenas como contingência durante a transição. Não deve ser removido ou desligado até que a validação na Vercel seja concluída e autorizada explicitamente pelo proprietário.
+> O Railway foi encerrado em 27 de agosto de 2026 após a validação da Vercel e autorização explícita do proprietário. A infraestrutura operacional final é Vercel + TiDB Cloud; o registro histórico está em [`docs/railway-deployment.md`](docs/railway-deployment.md).
 
 ## Requisitos
 
