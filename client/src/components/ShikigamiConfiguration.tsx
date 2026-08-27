@@ -1,113 +1,64 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  calculateInvocationStats,
-  INVOCATION_GRADE_RULES,
-  type InvocationGrade,
-} from "@shared/homebrewRules";
+import { calculateAttributeModifier, calculateInvocationStats, INVOCATION_GRADE_RULES, type InvocationGrade } from "@shared/homebrewRules";
 import { Check, Flame, Plus, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 
-const ATTRIBUTES = [
-  ["forca", "Força"],
-  ["destreza", "Destreza"],
-  ["constituicao", "Constituição"],
-  ["inteligencia", "Inteligência"],
-  ["presenca", "Presença"],
+const ATTRIBUTES = [["forca", "Força"], ["destreza", "Destreza"], ["constituicao", "Constituição"], ["inteligencia", "Inteligência"], ["sabedoria", "Sabedoria"], ["carisma", "Carisma"]] as const;
+const SKILLS = [["feiticaria", "Feitiçaria", "inteligencia"], ["investigacao", "Investigação", "inteligencia"], ["historia", "História", "inteligencia"], ["medicina", "Medicina", "sabedoria"], ["religiao", "Religião", "inteligencia"], ["ocultismo", "Ocultismo", "sabedoria"], ["prestidigitacao", "Prestidigitação", "destreza"], ["percepcao", "Percepção", "sabedoria"], ["intuicao", "Intuição", "sabedoria"], ["furtividade", "Furtividade", "destreza"], ["oficio", "Ofício", "inteligencia"], ["reflexos", "Reflexos", "destreza"], ["fortitude", "Fortitude", "constituicao"], ["vontade", "Vontade", "sabedoria"], ["astucia", "Astúcia", "inteligencia"], ["integridade", "Integridade", "constituicao"]] as const;
+const CONTROLLER_OPTIONS = [
+  ["concentrarPoder", "Concentrar Poder", "Progressão por nível com uma única invocação marcada em campo."],
+  ["fantocheSupremo", "Fantoche Supremo", "Escolha uma invocação; vida, CA e movimento recebem benefícios de Maestria. Pré-requisito: nível 10."],
+  ["invocacoesMoveis", "Invocações Móveis", "+1,5 m de movimento; o bônus cresce a cada 5 níveis."],
+  ["invocacoesEconomicas", "Invocações Econômicas", "Reduz o custo de invocações escolhidas; a quantidade aumenta nos níveis 10 e 15."],
+  ["invocacoesResistentes", "Invocações Resistentes", "Vida máxima das invocações aumenta em Maestria × 5."],
+  ["melhoriaResistencia", "Melhoria: Resistência", "CA, RD e progressões descritas no PDF. RD permanece manual quando necessário."],
+  ["melhoriaMobilidade", "Melhoria: Mobilidade", "+3 m; recebe aumentos de +1,5 m nos níveis 4, 8, 12 e 16."],
+  ["melhoriaPrecisao", "Melhoria: Precisão (CD)", "Bônus de CD e progressão por nível; Teste de Ataque continua configurável manualmente."],
+] as const;
+const TRAIT_OPTIONS = [
+  ["movimentoAlternativo", "Movimento Alternativo", "Escolha o atributo que define o movimento."],
+  ["defesaAlternativa", "Defesa Alternativa", "Escolha o atributo que define a Classe de Armadura."],
+  ["bonusPericia", "Bônus em Perícia", "Escolha a perícia; progressão do bônus por grau."],
+  ["tamanhoGrande", "Tamanho: Grande", "Aplique conforme o Livro Básico (página 320 indicada no PDF)."],
+  ["defensor", "Defensor", "Aliados a até 3 m recebem bônus de CA que evolui com o grau."],
+  ["robustez", "Robustez", "Aumenta a vida máxima com progressão por grau."],
+  ["movel", "Móvel", "Aumenta o movimento com progressão por grau."],
+  ["perito", "Perito", "A invocação recebe 2 perícias adicionais."],
 ] as const;
 
 type ShikigamiAbility = { id: string; name: string; description: string };
+type SkillState = Record<string, { trained?: boolean; mastery?: boolean; manualBonus?: number }>;
 type ShikigamiSheet = {
-  name?: string;
-  grade?: InvocationGrade;
-  userLevel?: number;
-  proficiencyBonus?: number;
-  attributes?: Record<string, number>;
-  abilities?: ShikigamiAbility[];
+  name?: string; type?: string; grade?: InvocationGrade; userLevel?: number; mastery?: number; proficiencyBonus?: number;
+  attributes?: Record<string, number>; skills?: SkillState; currentHealth?: number; healedHealth?: number; notes?: string;
+  controllerOptions?: Record<string, boolean>; traits?: Record<string, boolean>; movementAttribute?: string; defenseAttribute?: string; bonusSkill?: string; abilities?: ShikigamiAbility[];
 };
+function asSheet(value: unknown): ShikigamiSheet { return value && typeof value === "object" && !Array.isArray(value) ? value as ShikigamiSheet : {}; }
+function titleCase(value: string) { return value.slice(0, 1).toUpperCase() + value.slice(1); }
 
-function asSheet(value: unknown): ShikigamiSheet {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as ShikigamiSheet) : {};
+export function ShikigamiConfiguration({ manualMode, onManualMode, data, onData }: { manualMode: boolean; onManualMode: (value: boolean) => void; data: Record<string, unknown>; onData: React.Dispatch<React.SetStateAction<Record<string, unknown>>> }) {
+  const sheet = asSheet(data.shikigami); const grade = sheet.grade ?? "quarto"; const attributes = sheet.attributes ?? {}; const skills = sheet.skills ?? {}; const controllerOptions = sheet.controllerOptions ?? {}; const traits = sheet.traits ?? {}; const abilities = Array.isArray(sheet.abilities) ? sheet.abilities : [];
+  const userLevel = Math.max(1, Number(sheet.userLevel ?? 1)); const mastery = Math.max(0, Number(sheet.mastery ?? sheet.proficiencyBonus ?? 2));
+  const stats = useMemo(() => calculateInvocationStats(grade, Number(attributes.constituicao ?? 0), Number(attributes.destreza ?? 0), userLevel, mastery), [attributes.constituicao, attributes.destreza, grade, mastery, userLevel]);
+  const allocatedPoints = ATTRIBUTES.reduce((total, [key]) => total + Math.max(0, Number(attributes[key] ?? 0)), 0); const trainedSkills = SKILLS.filter(([key]) => skills[key]?.trained).length; const remainingSkills = Math.max(0, mastery - trainedSkills); const currentHealth = Math.max(0, Math.min(stats.health, Number(sheet.currentHealth ?? stats.health))); const lostHealth = Math.max(0, stats.health - currentHealth); const overBudget = allocatedPoints > stats.attributePoints; const overCap = ATTRIBUTES.some(([key]) => Number(attributes[key] ?? 0) > stats.attributeCap);
+  const updateSheet = (changes: Partial<ShikigamiSheet>) => onData(current => ({ ...current, shikigami: { ...asSheet(current.shikigami), ...changes } }));
+  const updateAttribute = (key: string, value: number) => updateSheet({ attributes: { ...attributes, [key]: Math.max(0, value || 0) } });
+  const toggle = (group: "controllerOptions" | "traits", key: string) => updateSheet({ [group]: { ...(group === "controllerOptions" ? controllerOptions : traits), [key]: !(group === "controllerOptions" ? controllerOptions[key] : traits[key]) } });
+  const updateSkill = (key: string, changes: SkillState[string]) => updateSheet({ skills: { ...skills, [key]: { ...skills[key], ...changes } } });
+  const updateAbility = (id: string, changes: Partial<ShikigamiAbility>) => updateSheet({ abilities: abilities.map(ability => ability.id === id ? { ...ability, ...changes } : ability) });
+  const Stat = ({ label, value, alert }: { label: string; value: string; alert?: boolean }) => <div className={`rounded-lg border p-2 text-center ${alert ? "border-amber-300/30 bg-amber-500/[.07]" : "border-white/8 bg-black/10"}`}><p className="text-base font-semibold text-rose-100">{value}</p><p className="mt-0.5 text-[9px] uppercase tracking-wide text-stone-500">{label}</p></div>;
+  return <section className="rounded-2xl border border-white/8 bg-[#17141f]/80 p-5"><div className="flex items-start justify-between gap-4"><div className="flex gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-rose-500/15 text-rose-200"><Flame size={16} /></span><div><p className="text-sm font-semibold text-stone-100">Criador de Shikigami</p><p className="mt-1 text-[11px] leading-relaxed text-stone-500">Ficha organizada como o modelo enviado: estado, informações, atributos, perícias, habilidades de controlador e características da invocação.</p></div></div><button type="button" onClick={() => onManualMode(!manualMode)} className="shrink-0 text-[11px] font-medium text-stone-400 hover:text-stone-200">{manualMode ? "Manual ativo" : "Modo manual"}</button></div>
+    <div className="mt-5 rounded-xl border border-fuchsia-300/12 bg-fuchsia-500/[.025] p-4"><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-fuchsia-200">Estado da invocação</p><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5"><Stat label="Máximos" value={String(stats.health)} /><Stat label="Curados" value={String(Math.max(0, Number(sheet.healedHealth ?? 0)))} /><Stat label="Perdidos" value={String(lostHealth)} alert={lostHealth > 0} /><Stat label="Atuais" value={String(currentHealth)} /><div><Label className="text-[9px] uppercase text-stone-500">Atualizar vida</Label><Input type="number" min={0} max={manualMode ? undefined : stats.health} value={currentHealth} onChange={event => updateSheet({ currentHealth: Number(event.target.value) })} className="mt-1 h-9 border-white/8 bg-black/10 text-xs text-stone-200" /></div></div></div>
+    <div className="mt-4 rounded-xl border border-white/8 bg-black/10 p-4"><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-stone-400">Informações</p><div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><div><Label className="text-xs text-stone-300">Nome</Label><Input value={sheet.name ?? ""} onChange={event => updateSheet({ name: event.target.value })} className="mt-1 h-9 bg-white/[.035] text-xs text-stone-200" /></div><div><Label className="text-xs text-stone-300">Tipo de Shikigami</Label><Input value={sheet.type ?? "Shikigami Comum"} onChange={event => updateSheet({ type: event.target.value })} className="mt-1 h-9 bg-white/[.035] text-xs text-stone-200" /></div><div><Label className="text-xs text-stone-300">Grau</Label><select value={grade} onChange={event => updateSheet({ grade: event.target.value as InvocationGrade })} className="mt-1 h-9 w-full rounded-md border border-white/8 bg-[#201b29] px-2 text-xs text-stone-200">{Object.keys(INVOCATION_GRADE_RULES).map(value => <option key={value} value={value}>{titleCase(value)} grau</option>)}</select></div><div><Label className="text-xs text-stone-300">Nível</Label><Input type="number" min={1} value={userLevel} onChange={event => updateSheet({ userLevel: Math.max(1, Number(event.target.value)) })} className="mt-1 h-9 bg-white/[.035] text-xs text-stone-200" /></div><div><Label className="text-xs text-stone-300">Maestria</Label><Input type="number" min={0} value={mastery} onChange={event => updateSheet({ mastery: Math.max(0, Number(event.target.value)) })} className="mt-1 h-9 bg-white/[.035] text-xs text-stone-200" /></div></div><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5"><Stat label="Custo" value={`${stats.cost} PE`} /><Stat label="CD" value={manualMode ? "Manual" : "Configurar"} /><Stat label="Classe de Armadura" value={String(stats.defense)} /><Stat label="Movimento" value="6,0 m" /><Stat label="Pontos restantes" value={String(Math.max(0, stats.attributePoints - allocatedPoints))} alert={overBudget || overCap} /></div></div>
+    <div className="mt-4 rounded-xl border border-white/8 bg-black/10 p-4"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold text-stone-200">Atributos</p><p className="mt-1 text-[10px] text-stone-500">Limite do grau: {stats.attributeCap}. Pontos disponíveis: {stats.attributePoints}. Os modificadores são calculados por atributo.</p></div><span className={`rounded-md px-2 py-1 text-[10px] ${overBudget || overCap ? "bg-amber-500/15 text-amber-200" : "bg-emerald-500/10 text-emerald-200"}`}>{allocatedPoints}/{stats.attributePoints}</span></div><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">{ATTRIBUTES.map(([key, label]) => <div key={key} className="rounded-md border border-white/7 p-2"><Label className="text-[10px] text-stone-400">{label}</Label><Input type="number" min={0} max={manualMode ? undefined : stats.attributeCap} value={Number(attributes[key] ?? 0)} onChange={event => updateAttribute(key, Number(event.target.value))} className="mt-1 h-8 border-white/8 bg-white/[.035] text-xs text-stone-200" /><p className="mt-1 text-[10px] text-rose-200">Modificador: {calculateAttributeModifier(Number(attributes[key] ?? 0)) >= 0 ? "+" : ""}{calculateAttributeModifier(Number(attributes[key] ?? 0))}</p></div>)}</div></div>
+    <div className="mt-4 rounded-xl border border-white/8 bg-black/10 p-4"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold text-stone-200">Perícias</p><p className="mt-1 text-[10px] text-stone-500">Marque as treinadas e de Maestria. Faltam {remainingSkills} perícia(s) para a Maestria informada.</p></div><span className="text-[10px] text-stone-400">{trainedSkills} treinada(s)</span></div><div className="mt-3 grid gap-1 sm:grid-cols-2">{SKILLS.map(([key, label, attribute]) => { const state = skills[key] ?? {}; const base = calculateAttributeModifier(Number(attributes[attribute] ?? 0)); return <div key={key} className="grid grid-cols-[1fr_auto_auto_58px] items-center gap-2 rounded-md border border-white/6 px-2 py-1.5 text-[10px]"><span className="text-stone-300">{label} <em className="text-stone-600">{attribute.slice(0, 3).toUpperCase()}</em></span><label className="flex items-center gap-1 text-stone-500"><input type="checkbox" checked={Boolean(state.trained)} onChange={event => updateSkill(key, { trained: event.target.checked })} /> Treinada</label><label className="flex items-center gap-1 text-stone-500"><input type="checkbox" checked={Boolean(state.mastery)} onChange={event => updateSkill(key, { mastery: event.target.checked })} /> Mt.</label><span className="text-right text-rose-200">{base + (state.trained ? 1 : 0) + (state.mastery ? mastery : 0) + Number(state.manualBonus ?? 0) >= 0 ? "+" : ""}{base + (state.trained ? 1 : 0) + (state.mastery ? mastery : 0) + Number(state.manualBonus ?? 0)}</span></div>; })}</div></div>
+    <div className="mt-4 grid gap-4 lg:grid-cols-2"><ChoicePanel title="Habilidades de Controlador" options={CONTROLLER_OPTIONS} values={controllerOptions} onToggle={key => toggle("controllerOptions", key)} /><ChoicePanel title="Características do Shikigami" options={TRAIT_OPTIONS} values={traits} onToggle={key => toggle("traits", key)} /></div>
+    <div className="mt-4 rounded-xl border border-white/8 bg-black/10 p-4"><p className="text-xs font-semibold text-stone-200">Configurações das características</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><SelectAttribute label="Movimento alternativo" value={sheet.movementAttribute ?? "forca"} disabled={!traits.movimentoAlternativo} onChange={movementAttribute => updateSheet({ movementAttribute })} /><SelectAttribute label="Defesa alternativa" value={sheet.defenseAttribute ?? "forca"} disabled={!traits.defesaAlternativa} onChange={defenseAttribute => updateSheet({ defenseAttribute })} /><div><Label className="text-xs text-stone-300">Bônus em perícia</Label><select disabled={!traits.bonusPericia} value={sheet.bonusSkill ?? "furtividade"} onChange={event => updateSheet({ bonusSkill: event.target.value })} className="mt-1 h-9 w-full rounded-md border border-white/8 bg-[#201b29] px-2 text-xs text-stone-200 disabled:opacity-40">{SKILLS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div></div></div>
+    <div className="mt-4 rounded-xl border border-white/8 bg-black/10 p-4"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold text-stone-200">Ações e características adicionais</p><p className="mt-1 text-[10px] text-stone-500">Registre ataques, ações e características não calculadas pelo PDF. Use o modo manual para exceções.</p></div><Button type="button" variant="outline" size="sm" onClick={() => updateSheet({ abilities: [...abilities, { id: crypto.randomUUID(), name: "", description: "" }] })} className="h-8 border-white/10 text-xs text-stone-200"><Plus size={13} className="mr-1" /> Adicionar</Button></div><div className="mt-3 space-y-2">{abilities.map((ability, index) => <div key={ability.id} className="rounded-md border border-white/7 p-2"><div className="flex gap-2"><Input value={ability.name} onChange={event => updateAbility(ability.id, { name: event.target.value })} placeholder={`Ação ou característica ${index + 1}`} className="h-8 bg-black/10 text-xs text-stone-200" /><button type="button" onClick={() => updateSheet({ abilities: abilities.filter(item => item.id !== ability.id) })} aria-label="Remover ação ou característica" className="text-stone-500 hover:text-rose-200"><Trash2 size={14} /></button></div><textarea value={ability.description} onChange={event => updateAbility(ability.id, { description: event.target.value })} placeholder="Efeito, ataque, condição ou anotação." className="mt-2 min-h-16 w-full rounded-md border border-white/8 bg-black/10 p-2 text-xs text-stone-300" /></div>)}{!abilities.length && <p className="text-[10px] text-stone-600">Nenhuma ação ou característica adicional.</p>}</div><Label className="mt-3 block text-xs text-stone-300">Anotações</Label><textarea value={sheet.notes ?? ""} onChange={event => updateSheet({ notes: event.target.value })} placeholder="Anotações de uso, RD manual, Teste de Ataque ou outro caso não automatizado no PDF." className="mt-1 min-h-20 w-full rounded-md border border-white/8 bg-white/[.035] p-2 text-xs text-stone-300" /></div>
+    <div className="mt-4 flex gap-2 rounded-lg border border-emerald-400/10 bg-emerald-400/[.04] p-3 text-[10px] leading-relaxed text-stone-400"><Check size={14} className="shrink-0 text-emerald-300" /> Os campos marcados como calculados respeitam a ficha enviada. RD e Teste de Ataque permanecem configuráveis manualmente, conforme as observações do próprio PDF.</div>
+  </section>;
 }
-
-export function ShikigamiConfiguration({
-  manualMode,
-  onManualMode,
-  data,
-  onData,
-}: {
-  manualMode: boolean;
-  onManualMode: (value: boolean) => void;
-  data: Record<string, unknown>;
-  onData: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
-}) {
-  const sheet = asSheet(data.shikigami);
-  const grade = sheet.grade ?? "quarto";
-  const attributes = sheet.attributes ?? {};
-  const userLevel = Math.max(1, Number(sheet.userLevel ?? 1));
-  const proficiencyBonus = Math.max(0, Number(sheet.proficiencyBonus ?? 2));
-  const abilities = Array.isArray(sheet.abilities) ? sheet.abilities : [];
-  const stats = useMemo(
-    () => calculateInvocationStats(grade, Number(attributes.constituicao ?? 0), Number(attributes.destreza ?? 0), userLevel, proficiencyBonus),
-    [attributes.constituicao, attributes.destreza, grade, proficiencyBonus, userLevel],
-  );
-  const allocatedPoints = ATTRIBUTES.reduce((total, [key]) => total + Math.max(0, Number(attributes[key] ?? 0)), 0);
-  const overBudget = allocatedPoints > stats.attributePoints;
-  const overCap = ATTRIBUTES.some(([key]) => Number(attributes[key] ?? 0) > stats.attributeCap);
-
-  function updateSheet(changes: Partial<ShikigamiSheet>) {
-    onData(current => ({ ...current, shikigami: { ...asSheet(current.shikigami), ...changes } }));
-  }
-
-  function updateAttribute(attribute: string, value: number) {
-    updateSheet({ attributes: { ...attributes, [attribute]: Math.max(0, value || 0) } });
-  }
-
-  function updateAbility(id: string, changes: Partial<ShikigamiAbility>) {
-    updateSheet({ abilities: abilities.map(ability => ability.id === id ? { ...ability, ...changes } : ability) });
-  }
-
-  return (
-    <section className="rounded-2xl border border-white/8 bg-[#17141f]/80 p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex gap-3">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-rose-500/15 text-rose-200"><Flame size={16} /></span>
-          <div><p className="text-sm font-semibold text-stone-100">Ficha de Shikigami</p><p className="mt-1 text-[11px] leading-relaxed text-stone-500">O grau define custo, pontos, limite por atributo, vida e defesa-base. Os demais campos ficam estruturados para futuras interações.</p></div>
-        </div>
-        <button type="button" onClick={() => onManualMode(!manualMode)} className="shrink-0 text-[11px] font-medium text-stone-400 hover:text-stone-200">{manualMode ? "Manual ativo" : "Modo manual"}</button>
-      </div>
-
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div><Label className="text-xs text-stone-300">Nome <span className="text-rose-300">*</span></Label><Input value={sheet.name ?? ""} onChange={event => updateSheet({ name: event.target.value })} placeholder="Ex.: Kuro, o Cão de Papel" className="mt-2 h-10 border-white/8 bg-white/[0.035] text-xs text-stone-200" /></div>
-        <div><Label className="text-xs text-stone-300">Grau <span className="text-rose-300">*</span></Label><select value={grade} onChange={event => updateSheet({ grade: event.target.value as InvocationGrade })} className="mt-2 h-10 w-full rounded-lg border border-white/8 bg-white/[0.035] px-3 text-xs text-stone-200">{Object.keys(INVOCATION_GRADE_RULES).map(value => <option key={value} value={value}>{value[0].toUpperCase() + value.slice(1)} grau</option>)}</select></div>
-        <div><Label className="text-xs text-stone-300">Nível do usuário</Label><Input type="number" min={1} value={userLevel} onChange={event => updateSheet({ userLevel: Math.max(1, Number(event.target.value)) })} className="mt-2 h-10 border-white/8 bg-white/[0.035] text-xs text-stone-200" /></div>
-        <div><Label className="text-xs text-stone-300">Bônus de proficiência</Label><Input type="number" min={0} value={proficiencyBonus} onChange={event => updateSheet({ proficiencyBonus: Math.max(0, Number(event.target.value)) })} className="mt-2 h-10 border-white/8 bg-white/[0.035] text-xs text-stone-200" /></div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <StatChip value={`${stats.cost} PE`} label="Custo" />
-        <StatChip value={String(stats.attributePoints)} label="Pontos" />
-        <StatChip value={String(stats.attributeCap)} label="Limite" />
-        <StatChip value={String(stats.health)} label="Vida" />
-        <StatChip value={String(stats.defense)} label="Defesa" />
-      </div>
-
-      <div className="mt-5 rounded-xl border border-white/8 bg-black/10 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-semibold text-stone-200">Atributos da invocação</p><p className="mt-1 text-[10px] text-stone-500">Distribua até {stats.attributePoints} pontos; cada atributo pode chegar a {stats.attributeCap}.</p></div><span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${overBudget || overCap ? "bg-amber-500/15 text-amber-200" : "bg-emerald-500/10 text-emerald-200"}`}>{allocatedPoints}/{stats.attributePoints} pontos</span></div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">{ATTRIBUTES.map(([key, label]) => <div key={key}><Label className="text-[10px] text-stone-400">{label}</Label><Input type="number" min={0} max={manualMode ? undefined : stats.attributeCap} value={Number(attributes[key] ?? 0)} onChange={event => updateAttribute(key, Number(event.target.value))} className="mt-1 h-9 border-white/8 bg-white/[0.035] text-xs text-stone-200" /></div>)}</div>
-        {(overBudget || overCap) && <p className="mt-3 text-[10px] text-amber-200">{manualMode ? "Valor personalizado registrado: " : "Pendência: "}{overBudget ? "os pontos distribuídos excedem o total do grau." : "um atributo excede o limite do grau."}</p>}
-      </div>
-
-      <div className="mt-5 rounded-xl border border-white/8 bg-black/10 p-4">
-        <div className="flex items-center justify-between"><div><p className="text-xs font-semibold text-stone-200">Habilidades e características</p><p className="mt-1 text-[10px] text-stone-500">Adicione, edite ou remova habilidades sem reduzir a ficha a texto solto.</p></div><Button type="button" variant="outline" size="sm" onClick={() => updateSheet({ abilities: [...abilities, { id: crypto.randomUUID(), name: "", description: "" }] })} className="h-8 border-white/10 text-xs text-stone-200"><Plus size={13} className="mr-1" /> Adicionar</Button></div>
-        <div className="mt-4 space-y-3">{abilities.length === 0 ? <p className="rounded-lg border border-dashed border-white/8 px-3 py-3 text-[10px] text-stone-500">Nenhuma habilidade adicionada. Use este espaço para ataques, traços ou efeitos passivos.</p> : abilities.map((ability, index) => <div key={ability.id} className="rounded-lg border border-white/8 bg-white/[0.02] p-3"><div className="flex gap-2"><Input value={ability.name} onChange={event => updateAbility(ability.id, { name: event.target.value })} placeholder={`Habilidade ${index + 1}`} className="h-9 border-white/8 bg-black/10 text-xs text-stone-200" /><button type="button" onClick={() => updateSheet({ abilities: abilities.filter(item => item.id !== ability.id) })} className="grid h-9 w-9 place-items-center rounded-md text-stone-500 hover:bg-rose-500/10 hover:text-rose-200" aria-label="Remover habilidade"><Trash2 size={14} /></button></div><textarea value={ability.description} onChange={event => updateAbility(ability.id, { description: event.target.value })} placeholder="Descreva efeito, condição ou limitação." className="mt-2 min-h-20 w-full resize-none rounded-md border border-white/8 bg-black/10 p-2 text-xs leading-relaxed text-stone-300 outline-none focus:border-rose-300/35" /></div>)}</div>
-      </div>
-      <div className="mt-4 flex items-center gap-2 text-[10px] text-stone-400"><Check size={13} className="text-emerald-300" /> Vida e defesa são calculadas pelo grau, Constituição, Destreza, nível e proficiência; exceções ficam sinalizadas pelo modo manual.</div>
-    </section>
-  );
-}
-
-function StatChip({ value, label }: { value: string; label: string }) {
-  return <div className="rounded-xl border border-white/7 bg-white/[0.025] px-2 py-3 text-center"><p className="text-sm font-semibold text-rose-200">{value}</p><p className="mt-1 text-[9px] uppercase tracking-wide text-stone-500">{label}</p></div>;
-}
+function ChoicePanel({ title, options, values, onToggle }: { title: string; options: ReadonlyArray<readonly [string, string, string]>; values: Record<string, boolean>; onToggle: (key: string) => void }) { return <div className="rounded-xl border border-white/8 bg-black/10 p-4"><p className="text-xs font-semibold text-stone-200">{title}</p><div className="mt-3 space-y-1.5">{options.map(([key, label, description]) => <label key={key} className={`block rounded-md border p-2 ${values[key] ? "border-fuchsia-300/30 bg-fuchsia-500/[.08]" : "border-white/6"}`}><span className="flex items-center gap-2 text-[11px] text-stone-200"><input type="checkbox" checked={Boolean(values[key])} onChange={() => onToggle(key)} /> {label}</span><span className="mt-1 block pl-5 text-[9px] leading-relaxed text-stone-500">{description}</span></label>)}</div></div>; }
+function SelectAttribute({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) { return <div><Label className="text-xs text-stone-300">{label}</Label><select disabled={disabled} value={value} onChange={event => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-white/8 bg-[#201b29] px-2 text-xs text-stone-200 disabled:opacity-40">{ATTRIBUTES.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></div>; }

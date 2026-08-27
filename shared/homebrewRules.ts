@@ -91,7 +91,7 @@ export const INVOCATION_GRADE_RULES = {
 } as const;
 
 export type InvocationGrade = keyof typeof INVOCATION_GRADE_RULES;
-export const INVOCATION_ATTRIBUTES = ["forca", "destreza", "constituicao", "inteligencia", "presenca"] as const;
+export const INVOCATION_ATTRIBUTES = ["forca", "destreza", "constituicao", "inteligencia", "sabedoria", "carisma"] as const;
 export type InvocationAttribute = (typeof INVOCATION_ATTRIBUTES)[number];
 
 export function calculateInvocationStats(

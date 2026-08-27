@@ -135,3 +135,7 @@
 - [ ] Normalizar Penalidades e os vínculos de Características/Talentos liberados por Evolução de Origem, com migration Drizzle revisada.
 - [ ] Substituir campos narrativos de benefício, restrição, propriedade e requisito pelos grupos estruturados exigidos dentro de Origem, Mecânica e Arma.
 - [ ] Tornar os tipos oficiais de dano selecionáveis para Técnica e Arma, preservando uma alternativa manual marcada quando necessário.
+- [ ] Analisar CriadordeFeitiços.xlsx como fonte de verdade do formato desejado, incluindo abas, campos, validações e fórmulas.
+- [ ] Replanejar a modelagem e o editor para reproduzir o fluxo da planilha, descartando os encaixes da especificação textual que não corresponderem a ela.
+- [ ] Analisar CópiadeCópia.pdf como fonte de verdade do formato, campos, limites e cálculos do criador de Shikigami.
+- [ ] Reestruturar o módulo Shikigami em seções e resultados automáticos que sigam o modelo do PDF, mantendo sobrescritas manuais identificadas.
