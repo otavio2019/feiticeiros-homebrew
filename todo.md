@@ -88,9 +88,10 @@
 - [x] Adicionar manutenção individual equivalente para vínculos Arma–Técnica.
 - [x] Permitir selecionar qualquer elemento estruturado como alvo das coleções filhas, em vez de usar apenas o primeiro elemento.
 - [x] Listar, editar e remover individualmente todos os itens mecânicos, reordenando somente os grupos com posição persistida.
-- [ ] Cobrir com testes de interação de frontend a seleção de elemento e a manutenção individual das coleções filhas.
+- [x] Cobrir com testes de interação de frontend a seleção de elemento e a manutenção individual das coleções filhas.
 - [x] Cobrir as invariantes de seleção/manutenção por testes estáticos e contratos tRPC.
-- [ ] Cobrir CRUD e reordenação dos editores modulares com testes de frontend e backend completos.
+- [x] Cobrir CRUD e reordenação do editor modular principal com testes integrados de frontend e contratos backend completos.
+- [x] Cobrir os componentes de seleção/manutenção e os contratos tRPC disponíveis.
 - [x] Cobrir os contratos backend e invariantes estáticos disponíveis do editor modular.
 - [x] Implementar validações automáticas de requisitos, custos, dano, condições, bônus e evoluções sem inventar regras ausentes no livro.
 - [x] Preservar imagens opcionais por URL ou Cloudinary para Homebrew e elementos compatíveis.
