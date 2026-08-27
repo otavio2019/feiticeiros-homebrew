@@ -331,6 +331,34 @@ var structuredWeaponTechniqueLinks = mysqlTable(
   (table) => [uniqueIndex("weapon_technique_link_unique").on(table.weaponElementId, table.techniqueElementId)]
 );
 
+// shared/homebrewRules.ts
+var HOME_BREW_MODULES = [
+  "origem",
+  "votos",
+  "tecnicas",
+  "armas",
+  "shikigami",
+  "mecanicas",
+  "aptidoes",
+  "especializacoes",
+  "outros"
+];
+function validateStructuredMechanics(input, manualMode = false) {
+  const errors = [];
+  for (const requirement of input.requirements ?? []) {
+    if (!requirement.type.trim()) errors.push("Requisito sem tipo.");
+    if (requirement.valueText == null && requirement.valueNumber == null) errors.push("Requisito sem valor.");
+  }
+  for (const bonus of input.attributeBonuses ?? []) {
+    if (!bonus.attribute.trim()) errors.push("B\xF4nus sem atributo.");
+    if (!Number.isInteger(bonus.value)) errors.push("B\xF4nus com valor inv\xE1lido.");
+  }
+  for (const effect of input.effects ?? []) {
+    if (!effect.description.trim()) errors.push("Efeito sem descri\xE7\xE3o.");
+  }
+  return { valid: manualMode || errors.length === 0, errors };
+}
+
 // server/_core/env.ts
 var ENV = {
   databaseUrl: process.env.DATABASE_URL ?? "",
@@ -670,6 +698,8 @@ async function deleteStructuredElement(id) {
 async function replaceStructuredMechanics(elementId, input) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  const validation = validateStructuredMechanics(input);
+  if (!validation.valid) throw new Error(`Dados mec\xE2nicos inv\xE1lidos: ${validation.errors.join(" ")}`);
   await database.transaction(async (tx) => {
     await tx.delete(structuredRequirements).where(eq(structuredRequirements.elementId, elementId));
     await tx.delete(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, elementId));
@@ -708,6 +738,23 @@ async function listStructuredElementsForShare(homebrewId) {
     ]);
     return { ...element, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions } };
   }));
+}
+async function reorderStructuredElement(id, direction) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  const currentRows = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1);
+  const current = currentRows[0];
+  if (!current) return void 0;
+  const rows = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, current.homebrewId)).orderBy(homebrewStructuredElements.position);
+  const index2 = rows.findIndex((row) => row.id === id);
+  const targetIndex = direction === "up" ? index2 - 1 : index2 + 1;
+  if (index2 < 0 || !rows[targetIndex]) return current;
+  const target = rows[targetIndex];
+  await database.transaction(async (tx) => {
+    await tx.update(homebrewStructuredElements).set({ position: target.position }).where(eq(homebrewStructuredElements.id, current.id));
+    await tx.update(homebrewStructuredElements).set({ position: current.position }).where(eq(homebrewStructuredElements.id, target.id));
+  });
+  return (await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1))[0];
 }
 
 // server/_core/cookies.ts
@@ -884,19 +931,6 @@ import { TRPCError as TRPCError2 } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { z as z2 } from "zod";
 
-// shared/homebrewRules.ts
-var HOME_BREW_MODULES = [
-  "origem",
-  "votos",
-  "tecnicas",
-  "armas",
-  "shikigami",
-  "mecanicas",
-  "aptidoes",
-  "especializacoes",
-  "outros"
-];
-
 // server/storage.ts
 import { v2 as cloudinary } from "cloudinary";
 import { randomUUID } from "node:crypto";
@@ -1053,6 +1087,10 @@ var homebrewRouter = router({
   structuredDelete: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), id: z2.number().int().positive() })).mutation(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
     return deleteStructuredElement(input.id);
+  }),
+  structuredReorder: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), id: z2.number().int().positive(), direction: z2.enum(["up", "down"]) })).mutation(async ({ ctx, input }) => {
+    await assertOwner(input.homebrewId, ctx.user.id);
+    return reorderStructuredElement(input.id, input.direction);
   }),
   structuredMechanics: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), elementId: z2.number().int().positive() })).query(async ({ ctx, input }) => {
     await assertOwner(input.homebrewId, ctx.user.id);
