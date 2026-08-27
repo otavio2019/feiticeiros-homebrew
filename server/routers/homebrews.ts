@@ -164,6 +164,12 @@ export const homebrewRouter = router({
       await assertOwner(input.homebrewId, ctx.user.id);
       return db.deleteStructuredElement(input.id);
     }),
+  structuredReorder: protectedProcedure
+    .input(z.object({ homebrewId: z.number().int().positive(), id: z.number().int().positive(), direction: z.enum(["up", "down"]) }))
+    .mutation(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      return db.reorderStructuredElement(input.id, input.direction);
+    }),
 
   structuredMechanics: protectedProcedure
     .input(z.object({ homebrewId: z.number().int().positive(), elementId: z.number().int().positive() }))

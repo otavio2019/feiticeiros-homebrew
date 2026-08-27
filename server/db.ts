@@ -478,3 +478,22 @@ export async function listStructuredElementsForShare(homebrewId: number) {
     return { ...element, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions } };
   }));
 }
+
+
+export async function reorderStructuredElement(id: number, direction: "up" | "down") {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  const currentRows = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1);
+  const current = currentRows[0];
+  if (!current) return undefined;
+  const rows = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, current.homebrewId)).orderBy(homebrewStructuredElements.position);
+  const index = rows.findIndex(row => row.id === id);
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || !rows[targetIndex]) return current;
+  const target = rows[targetIndex];
+  await database.transaction(async tx => {
+    await tx.update(homebrewStructuredElements).set({ position: target.position }).where(eq(homebrewStructuredElements.id, current.id));
+    await tx.update(homebrewStructuredElements).set({ position: current.position }).where(eq(homebrewStructuredElements.id, target.id));
+  });
+  return (await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id)).limit(1))[0];
+}
