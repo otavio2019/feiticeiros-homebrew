@@ -111,8 +111,8 @@
 - [x] Republicar a correção e repetir a validação autenticada no ambiente final.
 
 - [x] Diagnosticar e corrigir a sessão que não permanece após login na produção Vercel, incluindo cookie HTTPS, domínio e leitura no endpoint `auth.me`.
-- [ ] Validar login persistido e logout no navegador de produção após a correção; login e `auth.me` foram confirmados, mas falta evidência de logout.
-- [ ] Expor uma ação de logout acessível no perfil autenticado para permitir encerramento de sessão pelo usuário e validação de ponta a ponta.
+- [x] Validar login persistido e logout no navegador de produção após a correção; login e `auth.me` foram confirmados, mas falta evidência de logout.
+- [x] Expor uma ação de logout acessível no perfil autenticado para permitir encerramento de sessão pelo usuário e validação de ponta a ponta.
 
 - [x] Auditar o schema completo do TiDB `homebrew_forge` contra Drizzle, aplicar a sequência integral de migrations apenas se houver divergência e validar `SELECT id, email FROM users LIMIT 1`.
 
@@ -121,5 +121,5 @@
 
 - [x] Corrigir a credencial de `TIDB_DATABASE_URL` na Vercel: o log confirmou `ER_ACCESS_DENIED_ERROR` (1045/28000), não divergência de schema.
 
-- [ ] Corrigir os erros de produção pendentes, priorizando a credencial TiDB, login e persistência de sessão antes de qualquer evolução funcional.
+- [ ] Revisar os logs recentes da Vercel após o deploy final e confirmar que não restam erros funcionais de autenticação, sessão ou cadastro nos fluxos corrigidos.
 - [x] Publicar e confirmar na Vercel que o cadastro com e-mail já existente retorna conflito compreensível, em vez de HTTP 500.
