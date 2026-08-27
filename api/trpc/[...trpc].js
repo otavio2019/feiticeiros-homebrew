@@ -598,6 +598,57 @@ async function deleteHomebrew(id) {
   await database.delete(homebrewModules).where(eq(homebrewModules.homebrewId, id));
   await database.delete(homebrews).where(eq(homebrews.id, id));
 }
+async function duplicateStructuredEntities(database, sourceHomebrewId, clonedHomebrewId, moduleMap, legacyElementMap) {
+  const sourceElements = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, sourceHomebrewId));
+  const structuredElementMap = /* @__PURE__ */ new Map();
+  for (const element of sourceElements) {
+    const clonedModuleId = moduleMap.get(element.moduleId);
+    if (!clonedModuleId) continue;
+    const result = await database.insert(homebrewStructuredElements).values({
+      homebrewId: clonedHomebrewId,
+      moduleId: clonedModuleId,
+      legacyElementId: element.legacyElementId ? legacyElementMap.get(element.legacyElementId) ?? null : null,
+      type: element.type,
+      name: element.name,
+      description: element.description,
+      position: element.position,
+      isManual: element.isManual,
+      ruleSource: element.ruleSource
+    });
+    structuredElementMap.set(element.id, Number(result[0].insertId));
+  }
+  for (const element of sourceElements) {
+    const clonedElementId = structuredElementMap.get(element.id);
+    if (!clonedElementId) continue;
+    const [attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions] = await Promise.all([
+      database.select().from(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, element.id)),
+      database.select().from(structuredRequirements).where(eq(structuredRequirements.elementId, element.id)),
+      database.select().from(structuredEffects).where(eq(structuredEffects.elementId, element.id)),
+      database.select().from(structuredCosts).where(eq(structuredCosts.elementId, element.id)),
+      database.select().from(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, element.id)),
+      database.select().from(structuredRanges).where(eq(structuredRanges.elementId, element.id)),
+      database.select().from(structuredConditions).where(eq(structuredConditions.elementId, element.id)),
+      database.select().from(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, element.id)),
+      database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, element.id))
+    ]);
+    if (attributeBonuses.length) await database.insert(structuredAttributeBonuses).values(attributeBonuses.map((item) => ({ elementId: clonedElementId, attribute: item.attribute, value: item.value, position: item.position })));
+    if (requirements.length) await database.insert(structuredRequirements).values(requirements.map((item) => ({ elementId: clonedElementId, type: item.type, operator: item.operator, valueText: item.valueText, valueNumber: item.valueNumber, position: item.position })));
+    if (effects.length) await database.insert(structuredEffects).values(effects.map((item) => ({ elementId: clonedElementId, effectType: item.effectType, description: item.description, valueNumber: item.valueNumber, position: item.position })));
+    if (costs.length) await database.insert(structuredCosts).values(costs.map((item) => ({ elementId: clonedElementId, resource: item.resource, amount: item.amount, details: item.details, position: item.position })));
+    if (damageProfiles.length) await database.insert(structuredDamageProfiles).values(damageProfiles.map((item) => ({ elementId: clonedElementId, dice: item.dice, modifier: item.modifier, damageType: item.damageType, scaling: item.scaling, details: item.details })));
+    if (ranges.length) await database.insert(structuredRanges).values(ranges.map((item) => ({ elementId: clonedElementId, range: item.range, unit: item.unit, area: item.area, target: item.target })));
+    if (conditions.length) await database.insert(structuredConditions).values(conditions.map((item) => ({ elementId: clonedElementId, name: item.name, effect: item.effect, duration: item.duration, position: item.position })));
+    if (vowExchanges.length) await database.insert(structuredVowExchanges).values(vowExchanges.map((item) => ({ elementId: clonedElementId, kind: item.kind, description: item.description, valueNumber: item.valueNumber, position: item.position })));
+    if (evolutions.length) await database.insert(structuredEvolutions).values(evolutions.map((item) => ({ elementId: clonedElementId, name: item.name, description: item.description, position: item.position, isManual: item.isManual, ruleSource: item.ruleSource })));
+  }
+  const links = await database.select().from(structuredWeaponTechniqueLinks).where(eq(structuredWeaponTechniqueLinks.homebrewId, sourceHomebrewId));
+  for (const link of links) {
+    const weaponElementId = structuredElementMap.get(link.weaponElementId);
+    const techniqueElementId = structuredElementMap.get(link.techniqueElementId);
+    if (weaponElementId && techniqueElementId) await database.insert(structuredWeaponTechniqueLinks).values({ homebrewId: clonedHomebrewId, weaponElementId, techniqueElementId });
+  }
+  return structuredElementMap;
+}
 async function duplicateHomebrew(source, ownerId, shareId) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indispon\xEDvel.");
@@ -647,11 +698,12 @@ async function duplicateHomebrew(source, ownerId, shareId) {
       await database.update(homebrewElements).set({ parentElementId: clonedParentId }).where(eq(homebrewElements.id, clonedElementId));
     }
   }
+  const structuredElementMap = await duplicateStructuredEntities(database, source.id, clonedHomebrewId, moduleMap, elementMap);
   if (detail.images.length) {
     await database.insert(homebrewImages).values(detail.images.map((image) => ({
       homebrewId: clonedHomebrewId,
       moduleId: image.moduleId ? moduleMap.get(image.moduleId) : void 0,
-      elementId: image.elementId ? elementMap.get(image.elementId) : void 0,
+      elementId: image.elementId ? structuredElementMap.get(image.elementId) ?? elementMap.get(image.elementId) : void 0,
       source: image.source,
       url: image.url,
       storageKey: image.storageKey,

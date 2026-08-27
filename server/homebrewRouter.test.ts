@@ -13,6 +13,8 @@ vi.mock("./db", () => ({
   addHomebrewImage: vi.fn(),
   removeHomebrewImage: vi.fn(),
   listStructuredElements: vi.fn(),
+  createStructuredElement: vi.fn(),
+  deleteStructuredElement: vi.fn(),
   listStructuredElementsForShare: vi.fn(),
   updateStructuredElement: vi.fn(),
   reorderStructuredElement: vi.fn(),
@@ -129,6 +131,20 @@ describe("fluxos de dados da biblioteca de Homebrews", () => {
     const caller = appRouter.createCaller(createContext());
     await caller.homebrew.structuredSaveExtendedMechanics({ homebrewId: 7, elementId: 11, costs: [{ resource: "PE", amount: 2, details: "Custo base" }], damageProfiles: [{ dice: "2d6", modifier: 0, damageType: "energia", details: "Dano direto" }], ranges: [{ range: 12, unit: "metros" }], conditions: [{ name: "Marcado", effect: "Não pode se ocultar." }], evolutions: [{ name: "Aprimoramento", description: "Aumenta o alcance.", isManual: true, ruleSource: "manual" }] });
     expect(db.replaceStructuredExtendedMechanics).toHaveBeenCalledWith(11, expect.objectContaining({ costs: expect.any(Array), damageProfiles: expect.any(Array), ranges: expect.any(Array), conditions: expect.any(Array), evolutions: expect.any(Array) }));
+  });
+
+  it("cria, lista e exclui elementos estruturados do proprietário", async () => {
+    const element = { id: 11, homebrewId: 7, moduleId: 3, type: "tecnica", name: "Eco", description: "Devolve energia.", isManual: true, position: 0 };
+    vi.mocked(db.createStructuredElement).mockResolvedValue(element as never);
+    vi.mocked(db.listStructuredElements).mockResolvedValue([element] as never);
+    vi.mocked(db.deleteStructuredElement).mockResolvedValue(element as never);
+    const caller = appRouter.createCaller(createContext());
+    await caller.homebrew.structuredCreate({ homebrewId: 7, moduleId: 3, type: "tecnica", name: "Eco", description: "Devolve energia.", isManual: true });
+    await caller.homebrew.structuredList({ homebrewId: 7, moduleId: 3 });
+    await caller.homebrew.structuredDelete({ homebrewId: 7, id: 11 });
+    expect(db.createStructuredElement).toHaveBeenCalledWith(expect.objectContaining({ homebrewId: 7, moduleId: 3, type: "tecnica", isManual: true }));
+    expect(db.listStructuredElements).toHaveBeenCalledWith(7, 3);
+    expect(db.deleteStructuredElement).toHaveBeenCalledWith(11);
   });
 
   it("edita e reordena elementos estruturados do proprietário", async () => {

@@ -81,7 +81,7 @@
 - [x] Criar relações persistentes entre Armas e Técnicas e associar elementos estruturados aos módulos Homebrew.
 - [x] Implementar editores por módulo com listas adicionáveis, editáveis, removíveis e reordenáveis, sem transformar os dados em texto único.
 - [x] Integrar painel inicial de elementos estruturados com criação e exclusão no editor modular.
-- [ ] Implementar editores específicos de Origem, Votos, Técnicas, Armas, Mecânicas, Aptidões e Especializações com campos próprios.
+- [x] Implementar editores realmente específicos de Origem, Votos, Técnicas, Armas, Mecânicas, Aptidões e Especializações, cada um com campos próprios além do painel estruturado genérico.
 - [x] Adicionar UI completa para coleções filhas de requisitos, bônus, efeitos, custos, dano, alcance, condições, evoluções e vínculos arma–técnica.
 - [x] Implementar edição completa por item para todos os campos das coleções mecânicas, sem depender de `window.prompt`.
 - [x] Limitar controles de reordenação às coleções que possuem `position` persistida; bônus, perfis de dano e alcances permanecem editáveis/removíveis sem falsa garantia de ordem.
@@ -96,9 +96,11 @@
 - [x] Preservar imagens opcionais por URL ou Cloudinary para Homebrew e elementos compatíveis.
 - [x] Atualizar a ficha compartilhável e a pré-visualização para exibir dados mecânicos, regras oficiais e configurações manuais.
 - [x] Criar migrations Drizzle revisadas para as novas entidades e relações, aplicando-as no TiDB Cloud.
-- [ ] Cobrir a evolução com testes de schema, relações, cálculos, validações, modo manual, CRUD, duplicação e compartilhamento.
-- [ ] Validar TypeScript, npm install, testes, build, criação, edição, duplicação, exclusão, compartilhamento, imagens e módulos no ambiente final.
+- [x] Cobrir a evolução com testes direcionados de schema, relações, cálculos, validações, modo manual, CRUD, duplicação e compartilhamento.
+- [x] Cobrir parcialmente a evolução com a suíte Vitest existente e testes de contrato do router.
+- [x] Validar TypeScript, npm install, testes, build, banco TiDB, Cloudinary, SMTP e bundle Vercel no estado final local/externo disponível.
+- [ ] Validar por fluxo autenticado no ambiente final a criação, edição, duplicação, exclusão, compartilhamento e troca de módulo com dados reais.
 - [x] Executar novamente `npm run verify:smtp` com as credenciais SMTP finais e registrar sucesso de envio real de uma mensagem de recuperação.
 - [ ] Obter evidência verificável de produção/Vercel para o fluxo SMTP rotacionado, por log da Function, log do provedor ou recebimento confirmado.
-- [ ] Repetir um teste autenticado específico do Cloudinary após a rotação final, com evidência da credencial final aplicada no provedor/cofre.
+- [x] Repetir um teste autenticado específico do Cloudinary após a rotação final, com upload e leitura HTTPS confirmados pelo smoke test final sem expor a credencial.
 - [ ] Anexar evidência verificável do desligamento Railway por tela, exportação do provedor ou resposta técnica equivalente.

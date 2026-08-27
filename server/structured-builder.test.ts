@@ -26,5 +26,20 @@ describe("structured builder migration", () => {
     expect(source).toContain("childEditorFields");
     expect(source).toContain("Salvar item");
     expect(source).toContain("structuredWeaponTechniqueLinkUpdate");
+    expect(source).toContain("SpecificModuleConfiguration");
+    for (const field of ["originName", "weaponDamage", "mechanicFormula", "aptitudeEffect", "specializationEffect"]) {
+      expect(source).toContain(field);
+    }
+  });
+
+  it("mantém o remapeamento da duplicação estruturada no código do banco", () => {
+    const source = fs.readFileSync(path.resolve(process.cwd(), "server/db.ts"), "utf8");
+    expect(source).toContain("duplicateStructuredEntities");
+    expect(source).toContain("const structuredElementMap = new Map");
+    expect(source).toContain("legacyElementMap.get(element.legacyElementId)");
+    for (const table of ["structuredAttributeBonuses", "structuredRequirements", "structuredEffects", "structuredCosts", "structuredDamageProfiles", "structuredRanges", "structuredConditions", "structuredVowExchanges", "structuredEvolutions", "structuredWeaponTechniqueLinks"]) {
+      expect(source).toContain(`database.insert(${table})`);
+    }
+    expect(source).toContain("structuredElementMap.get(image.elementId)");
   });
 });
