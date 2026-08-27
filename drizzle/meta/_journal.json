@@ -22,6 +22,13 @@
       "when": 1787744151559,
       "tag": "0002_clean_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1787839000000,
+      "tag": "0003_useful_blackheart",
+      "breakpoints": true
     }
   ]
 }

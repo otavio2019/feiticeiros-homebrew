@@ -168,3 +168,166 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Homebrew = typeof homebrews.$inferSelect;
 export type InsertHomebrew = typeof homebrews.$inferInsert;
+
+export const structuredRuleSource = mysqlEnum("structuredRuleSource", ["official", "homebrew", "manual"]);
+export const structuredRequirementType = mysqlEnum("structuredRequirementType", [
+  "atributo", "nivel", "origem", "voto", "aptidao", "especializacao", "tecnica", "item", "condicao", "custom",
+]);
+export const structuredEffectType = mysqlEnum("structuredEffectType", ["text", "bonus", "penalty", "condition", "custom"]);
+export const structuredExchangeKind = mysqlEnum("structuredExchangeKind", ["gain", "loss"]);
+
+export const homebrewStructuredElements = mysqlTable(
+  "homebrewStructuredElements",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    homebrewId: int("homebrewId").notNull().references(() => homebrews.id),
+    moduleId: int("moduleId").notNull().references(() => homebrewModules.id),
+    legacyElementId: int("legacyElementId"),
+    type: homebrewElementType.notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    description: text("description").notNull(),
+    position: int("position").notNull().default(0),
+    isManual: boolean("isManual").notNull().default(false),
+    ruleSource: structuredRuleSource.notNull().default("homebrew"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("structured_elements_homebrew_type_idx").on(table.homebrewId, table.type),
+    index("structured_elements_module_position_idx").on(table.moduleId, table.position),
+  ],
+);
+
+export const structuredAttributeBonuses = mysqlTable(
+  "structuredAttributeBonuses",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    elementId: int("elementId").notNull().references(() => homebrewStructuredElements.id),
+    attribute: varchar("attribute", { length: 64 }).notNull(),
+    value: int("value").notNull(),
+    position: int("position").notNull().default(0),
+  },
+  table => [index("attribute_bonuses_element_idx").on(table.elementId)],
+);
+
+export const structuredRequirements = mysqlTable(
+  "structuredRequirements",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    elementId: int("elementId").notNull().references(() => homebrewStructuredElements.id),
+    type: structuredRequirementType.notNull(),
+    operator: varchar("operator", { length: 16 }).notNull().default("gte"),
+    valueText: varchar("valueText", { length: 255 }),
+    valueNumber: int("valueNumber"),
+    position: int("position").notNull().default(0),
+  },
+  table => [index("requirements_element_position_idx").on(table.elementId, table.position)],
+);
+
+export const structuredEffects = mysqlTable(
+  "structuredEffects",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    elementId: int("elementId").notNull().references(() => homebrewStructuredElements.id),
+    effectType: structuredEffectType.notNull().default("text"),
+    description: text("description").notNull(),
+    valueNumber: int("valueNumber"),
+    position: int("position").notNull().default(0),
+  },
+  table => [index("effects_element_position_idx").on(table.elementId, table.position)],
+);
+
+export const structuredCosts = mysqlTable(
+  "structuredCosts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    elementId: int("elementId").notNull().references(() => homebrewStructuredElements.id),
+    resource: varchar("resource", { length: 64 }).notNull(),
+    amount: int("amount").notNull(),
+    details: text("details").notNull(),
+    position: int("position").notNull().default(0),
+  },
+  table => [index("costs_element_position_idx").on(table.elementId, table.position)],
+);
+
+export const structuredDamageProfiles = mysqlTable(
+  "structuredDamageProfiles",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    elementId: int("elementId").notNull().references(() => homebrewStructuredElements.id),
+    dice: varchar("dice", { length: 32 }).notNull(),
+    modifier: int("modifier").notNull().default(0),
+    damageType: varchar("damageType", { length: 64 }).notNull(),
+    scaling: varchar("scaling", { length: 255 }).notNull().default(""),
+    details: text("details").notNull(),
+  },
+  table => [index("damage_profiles_element_idx").on(table.elementId)],
+);
+
+export const structuredRanges = mysqlTable(
+  "structuredRanges",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    elementId: int("elementId").notNull().references(() => homebrewStructuredElements.id),
+    range: int("range").notNull(),
+    unit: varchar("unit", { length: 32 }).notNull(),
+    area: varchar("area", { length: 255 }).notNull().default(""),
+    target: varchar("target", { length: 255 }).notNull().default(""),
+  },
+  table => [index("ranges_element_idx").on(table.elementId)],
+);
+
+export const structuredConditions = mysqlTable(
+  "structuredConditions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    elementId: int("elementId").notNull().references(() => homebrewStructuredElements.id),
+    name: varchar("name", { length: 120 }).notNull(),
+    effect: text("effect").notNull(),
+    duration: varchar("duration", { length: 120 }).notNull().default(""),
+    position: int("position").notNull().default(0),
+  },
+  table => [index("conditions_element_position_idx").on(table.elementId, table.position)],
+);
+
+export const structuredVowExchanges = mysqlTable(
+  "structuredVowExchanges",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    elementId: int("elementId").notNull().references(() => homebrewStructuredElements.id),
+    kind: structuredExchangeKind.notNull(),
+    description: text("description").notNull(),
+    valueNumber: int("valueNumber"),
+    position: int("position").notNull().default(0),
+  },
+  table => [index("vow_exchanges_element_kind_idx").on(table.elementId, table.kind, table.position)],
+);
+
+export const structuredEvolutions = mysqlTable(
+  "structuredEvolutions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    elementId: int("elementId").notNull().references(() => homebrewStructuredElements.id),
+    name: varchar("name", { length: 160 }).notNull(),
+    description: text("description").notNull(),
+    position: int("position").notNull().default(0),
+    isManual: boolean("isManual").notNull().default(false),
+    ruleSource: structuredRuleSource.notNull().default("homebrew"),
+  },
+  table => [index("evolutions_element_position_idx").on(table.elementId, table.position)],
+);
+
+export const structuredWeaponTechniqueLinks = mysqlTable(
+  "structuredWeaponTechniqueLinks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    homebrewId: int("homebrewId").notNull().references(() => homebrews.id),
+    weaponElementId: int("weaponElementId").notNull().references(() => homebrewStructuredElements.id),
+    techniqueElementId: int("techniqueElementId").notNull().references(() => homebrewStructuredElements.id),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [uniqueIndex("weapon_technique_link_unique").on(table.weaponElementId, table.techniqueElementId)],
+);
+
+export type StructuredElement = typeof homebrewStructuredElements.$inferSelect;
+export type InsertStructuredElement = typeof homebrewStructuredElements.$inferInsert;

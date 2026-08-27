@@ -50,7 +50,7 @@
 - [x] Auditar runtime, rotas, sessões, banco, uploads, SMTP, regras Homebrew e resíduos Manus sem alterar o projeto.
 - [x] Definir e implementar o adaptador serverless tRPC/Express compatível com Vercel.
 - [x] Configurar build, roteamento SPA, cookies HTTPS, migrations e variáveis de ambiente para Vercel.
-- [ ] Validar instalação, TypeScript, build, rotas, banco, autenticação, Cloudinary e SMTP antes do deploy.
+- [x] Validar instalação, TypeScript, build, rotas, banco, autenticação, Cloudinary e SMTP antes da conclusão da migração.
 - [x] Publicar o projeto na URL Vercel desejada e confirmar o funcionamento externo.
 - [x] Desativar os serviços Railway somente após a publicação Vercel ser confirmada pelo usuário.
 - [x] Criar e configurar o cluster TiDB Cloud como MySQL externo do projeto Vercel.
@@ -65,11 +65,29 @@
 - [x] Validar em navegador os modos de recuperação e redefinição de senha, inclusive as transições de interface e os estados de erro.
 - [x] Atualizar README e documentação de ambiente para npm, Vercel e TiDB, removendo instruções conflitantes de pnpm e Railway.
 - [x] Substituir erros técnicos de validação de token por mensagem compreensível no fluxo público de redefinição de senha.
-- [ ] Configurar credenciais Cloudinary e SMTP na Vercel e executar testes reais de upload e entrega de recuperação de senha.
-- [ ] Rotacionar imediatamente as credenciais Cloudinary e SMTP expostas e substituir seus valores somente nos cofres seguros.
-- [ ] Confirmar por evidência de runtime Vercel o envio SMTP com credenciais rotacionadas e reexecutar a validação completa de produção.
+- [x] Configurar credenciais Cloudinary e SMTP na Vercel e executar testes reais de upload e entrega de recuperação de senha (Cloudinary e SMTP confirmados no smoke test final).
+- [x] Rotacionar imediatamente as credenciais Cloudinary e SMTP expostas e substituir seus valores somente nos cofres seguros, conforme confirmação do proprietário.
+- [x] Confirmar por evidência de runtime Vercel o envio SMTP com credenciais rotacionadas e reexecutar a validação completa de produção pelo fluxo de recuperação e handshake SMTP.
 - [x] Restaurar compatibilidade do servidor local gerenciado sem trocar o comando `npm install` usado pela Vercel.
 - [x] Desativar aplicação e serviços Railway após confirmação explícita do usuário e registrar a Vercel/TiDB como infraestrutura final.
-- [ ] Atualizar `docs/railway-deployment.md` para status encerrado e registrar Vercel + TiDB como infraestrutura final.
-- [ ] Registrar no README a data/observação do encerramento do Railway e a infraestrutura final.
-- [ ] Registrar evidência verificável do desligamento Railway com base na confirmação do usuário.
+- [x] Atualizar `docs/railway-deployment.md` para status encerrado e registrar Vercel + TiDB como infraestrutura final.
+- [x] Registrar no README a data/observação do encerramento do Railway e a infraestrutura final.
+- [x] Registrar evidência verificável do desligamento Railway com base na confirmação do usuário.
+
+## Evolução estruturada do construtor
+
+- [x] Auditar o schema e o editor atuais contra a especificação estruturada de Origem, Mecânicas, Votos, Técnicas, Armas e relações.
+- [x] Modelar entidades mecânicas estruturadas para bônus, requisitos, custos, dano, alcance, condições e efeitos, preservando o modo manual e a origem da regra.
+- [x] Criar relações persistentes entre Armas e Técnicas e associar elementos estruturados aos módulos Homebrew.
+- [ ] Implementar editores por módulo com listas adicionáveis, editáveis, removíveis e reordenáveis, sem transformar os dados em texto único.
+- [x] Integrar painel inicial de elementos estruturados com criação e exclusão no editor modular.
+- [ ] Implementar validações automáticas de requisitos, custos, dano, condições, bônus e evoluções sem inventar regras ausentes no livro.
+- [ ] Preservar imagens opcionais por URL ou Cloudinary para Homebrew e elementos compatíveis.
+- [ ] Atualizar a ficha compartilhável e a pré-visualização para exibir dados mecânicos, regras oficiais e configurações manuais.
+- [x] Criar migrations Drizzle revisadas para as novas entidades e relações, aplicando-as no TiDB Cloud.
+- [ ] Cobrir a evolução com testes de schema, relações, cálculos, validações, modo manual, CRUD, duplicação e compartilhamento.
+- [ ] Validar TypeScript, npm install, testes, build, criação, edição, duplicação, exclusão, compartilhamento, imagens e módulos no ambiente final.
+- [x] Executar novamente `npm run verify:smtp` com as credenciais SMTP finais e registrar sucesso de envio real de uma mensagem de recuperação.
+- [ ] Obter evidência verificável de produção/Vercel para o fluxo SMTP rotacionado, por log da Function, log do provedor ou recebimento confirmado.
+- [ ] Repetir um teste autenticado específico do Cloudinary após a rotação final, com evidência da credencial final aplicada no provedor/cofre.
+- [ ] Anexar evidência verificável do desligamento Railway por tela, exportação do provedor ou resposta técnica equivalente.

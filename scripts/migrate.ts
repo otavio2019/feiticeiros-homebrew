@@ -1,21 +1,21 @@
 import { migrate } from "drizzle-orm/mysql2/migrator";
+import { drizzle } from "drizzle-orm/mysql2";
+import { createPool } from "mysql2/promise";
 import path from "node:path";
-import { getDb } from "../server/db";
+import * as schema from "../drizzle/schema";
+import { getMySqlPoolOptions } from "../server/database";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL é obrigatório para aplicar migrations.");
+const databaseUrl = process.env.TIDB_DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error("TIDB_DATABASE_URL é obrigatório para aplicar migrations no TiDB Cloud.");
 }
 
-const database = await getDb();
-if (!database) {
-  throw new Error("Não foi possível inicializar a conexão com o banco.");
-}
+const pool = createPool(getMySqlPoolOptions(databaseUrl));
+const database = drizzle(pool, { schema, mode: "default" });
 
 try {
   await migrate(database, { migrationsFolder: path.resolve(process.cwd(), "drizzle") });
-  console.info("Migrations aplicadas com sucesso.");
+  console.info("Migrations TiDB aplicadas com sucesso.");
 } finally {
-  await database.$client.end();
+  await pool.end();
 }
-
-process.exit(0);

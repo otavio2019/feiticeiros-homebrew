@@ -116,6 +116,21 @@ function formatDate(date: Date | string) {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date(date));
 }
 
+function StructuredElementsPanel({ homebrewId, moduleId, moduleType }: { homebrewId: number | null; moduleId?: number; moduleType: HomebrewModuleType }) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const elementsQuery = trpc.homebrew.structuredList.useQuery({ homebrewId: homebrewId ?? 0 }, { enabled: Boolean(homebrewId) });
+  const createMutation = trpc.homebrew.structuredCreate.useMutation({ onSuccess: () => { setName(""); setDescription(""); elementsQuery.refetch(); toast.success("Elemento estruturado criado."); }, onError: error => toast.error(error.message) });
+  const deleteMutation = trpc.homebrew.structuredDelete.useMutation({ onSuccess: () => elementsQuery.refetch(), onError: error => toast.error(error.message) });
+  const typeMap: Record<HomebrewModuleType, "origem" | "shikigami" | "voto" | "tecnica" | "feitico" | "arma" | "mecanica" | "aptidao" | "especializacao" | "outro"> = { origem: "origem", shikigami: "shikigami", votos: "voto", tecnicas: "tecnica", armas: "arma", mecanicas: "mecanica", aptidoes: "aptidao", especializacoes: "especializacao", outros: "outro" };
+  if (!homebrewId || !moduleId) return null;
+  return <section className="rounded-2xl border border-rose-300/12 bg-rose-500/[0.035] p-5">
+    <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-300">Camada estruturada</p><h2 className="mt-1 text-sm font-semibold text-stone-100">Elementos de {HOME_BREW_MODULE_LABELS[moduleType]}</h2><p className="mt-1 text-[11px] leading-relaxed text-stone-500">Itens separados do texto legado, com tipo e modo manual preservados.</p></div><span className="rounded-full bg-white/5 px-2 py-1 text-[10px] text-stone-400">{elementsQuery.data?.length ?? 0} itens</span></div>
+    <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto]"><Input value={name} onChange={event => setName(event.target.value)} placeholder="Nome do elemento" className="h-9 bg-black/15 text-xs" /><Input value={description} onChange={event => setDescription(event.target.value)} placeholder="Descrição mecânica" className="h-9 bg-black/15 text-xs" /><Button disabled={!name.trim() || !description.trim() || createMutation.isPending} onClick={() => createMutation.mutate({ homebrewId, moduleId, type: typeMap[moduleType], name: name.trim(), description: description.trim(), isManual: true })} className="h-9 gap-1 bg-rose-500 px-3 text-xs text-white hover:bg-rose-400"><Plus size={13} /> Adicionar</Button></div>
+    <div className="mt-4 space-y-2">{elementsQuery.data?.map(element => <div key={element.id} className="flex items-start justify-between gap-3 rounded-xl border border-white/7 bg-black/10 p-3"><div><p className="text-xs font-semibold text-stone-200">{element.name}</p><p className="mt-1 text-[11px] leading-relaxed text-stone-500">{element.description}</p></div><button aria-label={`Excluir ${element.name}`} onClick={() => deleteMutation.mutate({ homebrewId, id: element.id })} className="rounded-md p-1.5 text-stone-500 hover:bg-rose-500/10 hover:text-rose-300"><Trash2 size={13} /></button></div>)}{!elementsQuery.data?.length && <p className="rounded-xl border border-dashed border-white/8 px-3 py-4 text-center text-[11px] text-stone-600">Nenhum elemento estruturado neste módulo ainda.</p>}</div>
+  </section>;
+}
+
 export default function Home() {
   const { user, loading } = useAuth();
   const isAuthenticated = Boolean(user);
@@ -508,6 +523,7 @@ export default function Home() {
                       {activeModule === "tecnicas" && <TechniqueConfiguration manualMode={manualMode} onManualMode={setManualMode} data={draftData} onData={setDraftData} />}
                       {activeModule === "votos" && <VowConfiguration manualMode={manualMode} onManualMode={setManualMode} data={draftData} onData={setDraftData} />}
                       {activeModule === "shikigami" && <ShikigamiConfiguration manualMode={manualMode} onManualMode={setManualMode} data={draftData} onData={setDraftData} />}
+                      <StructuredElementsPanel homebrewId={activeHomebrewId} moduleId={activeModuleId} moduleType={activeModule} />
                       {!["tecnicas", "votos", "shikigami"].includes(activeModule) && <GenericConfiguration module={activeModule} manualMode={manualMode} onManualMode={setManualMode} />}
                       {manualMode && <ManualNotes value={String(draftData.manualNotes ?? "")} customFields={Array.isArray(draftData.customFields) ? draftData.customFields.map(String) : []} onChange={value => setDraftData(current => ({ ...current, manualNotes: value, containsCustomContent: true }))} onFieldsChange={fields => setDraftData(current => ({ ...current, customFields: fields, containsCustomContent: true }))} />}
                       <ValidationPanel items={validationItems} />

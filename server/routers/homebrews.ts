@@ -113,6 +113,76 @@ export const homebrewRouter = router({
   shared: publicProcedure.input(z.object({ shareId: z.string().min(6).max(32) })).query(async ({ input }) => {
     const homebrew = await db.getShareableHomebrew(input.shareId);
     if (!homebrew) throw new TRPCError({ code: "NOT_FOUND", message: "Esta Homebrew não está disponível para leitura." });
-    return db.getHomebrewDetail(homebrew.id);
+    const detail = await db.getHomebrewDetail(homebrew.id);
+    if (!detail) throw new TRPCError({ code: "NOT_FOUND", message: "Esta Homebrew não está disponível para leitura." });
+    const structured = await db.listStructuredElements(homebrew.id);
+    return { ...detail, structured };
   }),
+
+  structuredList: protectedProcedure
+    .input(z.object({ homebrewId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      return db.listStructuredElements(input.homebrewId);
+    }),
+
+  structuredCreate: protectedProcedure
+    .input(z.object({
+      homebrewId: z.number().int().positive(),
+      moduleId: z.number().int().positive(),
+      type: z.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro"]),
+      name: z.string().trim().min(1).max(160),
+      description: z.string().trim().min(1),
+      isManual: z.boolean().default(false),
+      position: z.number().int().min(0).default(0),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      return db.createStructuredElement(input);
+    }),
+
+  structuredUpdate: protectedProcedure
+    .input(z.object({
+      homebrewId: z.number().int().positive(),
+      id: z.number().int().positive(),
+      moduleId: z.number().int().positive().optional(),
+      type: z.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro"]).optional(),
+      name: z.string().trim().min(1).max(160).optional(),
+      description: z.string().trim().min(1).optional(),
+      isManual: z.boolean().optional(),
+      position: z.number().int().min(0).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      const { id, homebrewId: _homebrewId, ...changes } = input;
+      return db.updateStructuredElement(id, changes);
+    }),
+
+  structuredDelete: protectedProcedure
+    .input(z.object({ homebrewId: z.number().int().positive(), id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      return db.deleteStructuredElement(input.id);
+    }),
+
+  structuredMechanics: protectedProcedure
+    .input(z.object({ homebrewId: z.number().int().positive(), elementId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      return db.getStructuredMechanics(input.elementId);
+    }),
+
+  structuredSaveMechanics: protectedProcedure
+    .input(z.object({
+      homebrewId: z.number().int().positive(),
+      elementId: z.number().int().positive(),
+      requirements: z.array(z.object({ type: z.enum(["atributo", "nivel", "origem", "voto", "aptidao", "especializacao", "tecnica", "item", "condicao", "custom"]), operator: z.string().max(16).optional(), valueText: z.string().max(255).nullable().optional(), valueNumber: z.number().int().nullable().optional() })).optional(),
+      attributeBonuses: z.array(z.object({ attribute: z.string().trim().min(1).max(64), value: z.number().int() })).optional(),
+      effects: z.array(z.object({ effectType: z.enum(["text", "bonus", "penalty", "condition", "custom"]).optional(), description: z.string().trim().min(1), valueNumber: z.number().int().nullable().optional() })).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      const { homebrewId: _homebrewId, elementId, ...mechanics } = input;
+      return db.replaceStructuredMechanics(elementId, mechanics);
+    }),
 });

@@ -11,6 +11,17 @@ import {
   InsertUser,
   passwordResetTokens,
   users,
+  homebrewStructuredElements,
+  structuredAttributeBonuses,
+  structuredRequirements,
+  structuredEffects,
+  structuredCosts,
+  structuredDamageProfiles,
+  structuredRanges,
+  structuredConditions,
+  structuredVowExchanges,
+  structuredEvolutions,
+  structuredWeaponTechniqueLinks,
 } from "../drizzle/schema";
 import type { HomebrewModuleType } from "../shared/homebrewRules";
 import { ENV } from "./_core/env";
@@ -224,6 +235,20 @@ export async function updateHomebrew(id: number, changes: {
 export async function deleteHomebrew(id: number) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indisponível.");
+  const structuredIds = await database.select({ id: homebrewStructuredElements.id }).from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, id));
+  for (const row of structuredIds) {
+    await database.delete(structuredWeaponTechniqueLinks).where(or(eq(structuredWeaponTechniqueLinks.weaponElementId, row.id), eq(structuredWeaponTechniqueLinks.techniqueElementId, row.id)));
+    await database.delete(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, row.id));
+    await database.delete(structuredRequirements).where(eq(structuredRequirements.elementId, row.id));
+    await database.delete(structuredEffects).where(eq(structuredEffects.elementId, row.id));
+    await database.delete(structuredCosts).where(eq(structuredCosts.elementId, row.id));
+    await database.delete(structuredDamageProfiles).where(eq(structuredDamageProfiles.elementId, row.id));
+    await database.delete(structuredRanges).where(eq(structuredRanges.elementId, row.id));
+    await database.delete(structuredConditions).where(eq(structuredConditions.elementId, row.id));
+    await database.delete(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, row.id));
+    await database.delete(structuredEvolutions).where(eq(structuredEvolutions.elementId, row.id));
+  }
+  await database.delete(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, id));
   await database.delete(homebrewImages).where(eq(homebrewImages.homebrewId, id));
   await database.delete(homebrewElements).where(eq(homebrewElements.homebrewId, id));
   await database.delete(homebrewModules).where(eq(homebrewModules.homebrewId, id));
@@ -335,4 +360,96 @@ export async function removeHomebrewImage(homebrewId: number, imageId: number) {
   if (!database) throw new Error("Banco de dados indisponível.");
   await database.delete(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.id, imageId)));
   return { success: true } as const;
+}
+
+
+export async function listStructuredElements(homebrewId: number) {
+  const database = await getDb();
+  if (!database) return [];
+  return database.select().from(homebrewStructuredElements)
+    .where(eq(homebrewStructuredElements.homebrewId, homebrewId))
+    .orderBy(homebrewStructuredElements.position);
+}
+
+export async function createStructuredElement(input: {
+  homebrewId: number;
+  moduleId: number;
+  type: "origem" | "shikigami" | "voto" | "tecnica" | "feitico" | "arma" | "mecanica" | "aptidao" | "especializacao" | "outro";
+  name: string;
+  description: string;
+  isManual?: boolean;
+  position?: number;
+}) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  const result = await database.insert(homebrewStructuredElements).values({
+    homebrewId: input.homebrewId,
+    moduleId: input.moduleId,
+    type: input.type,
+    name: input.name,
+    description: input.description,
+    isManual: input.isManual ?? false,
+    position: input.position ?? 0,
+  });
+  const id = Number((result as unknown as [{ insertId: number }])[0].insertId);
+  const rows = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id));
+  return rows[0];
+}
+
+export async function updateStructuredElement(id: number, input: Partial<{
+  moduleId: number;
+  type: "origem" | "shikigami" | "voto" | "tecnica" | "feitico" | "arma" | "mecanica" | "aptidao" | "especializacao" | "outro";
+  name: string;
+  description: string;
+  isManual: boolean;
+  position: number;
+}>) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  await database.update(homebrewStructuredElements).set(input).where(eq(homebrewStructuredElements.id, id));
+  const rows = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id));
+  return rows[0];
+}
+
+export async function deleteStructuredElement(id: number) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  await database.delete(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, id));
+  return { id };
+}
+
+export async function replaceStructuredMechanics(elementId: number, input: {
+  requirements?: Array<{ type: "atributo" | "nivel" | "origem" | "voto" | "aptidao" | "especializacao" | "tecnica" | "item" | "condicao" | "custom"; operator?: string; valueText?: string | null; valueNumber?: number | null }>;
+  attributeBonuses?: Array<{ attribute: string; value: number }>;
+  effects?: Array<{ effectType?: "text" | "bonus" | "penalty" | "condition" | "custom"; description: string; valueNumber?: number | null }>;
+}) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  await database.transaction(async tx => {
+    await tx.delete(structuredRequirements).where(eq(structuredRequirements.elementId, elementId));
+    await tx.delete(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, elementId));
+    await tx.delete(structuredEffects).where(eq(structuredEffects.elementId, elementId));
+    if (input.requirements?.length) await tx.insert(structuredRequirements).values(input.requirements.map((item, position) => ({ elementId, type: item.type, operator: item.operator ?? "gte", valueText: item.valueText ?? null, valueNumber: item.valueNumber ?? null, position })));
+    if (input.attributeBonuses?.length) await tx.insert(structuredAttributeBonuses).values(input.attributeBonuses.map((item, position) => ({ elementId, attribute: item.attribute, value: item.value, position })));
+    if (input.effects?.length) await tx.insert(structuredEffects).values(input.effects.map((item, position) => ({ elementId, effectType: item.effectType ?? "text", description: item.description, valueNumber: item.valueNumber ?? null, position })));
+  });
+  return { elementId };
+}
+
+export async function getStructuredMechanics(elementId: number) {
+  const database = await getDb();
+  if (!database) return { requirements: [], attributeBonuses: [], effects: [] };
+  const [requirements, attributeBonuses, effects] = await Promise.all([
+    database.select().from(structuredRequirements).where(eq(structuredRequirements.elementId, elementId)).orderBy(structuredRequirements.position),
+    database.select().from(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, elementId)),
+    database.select().from(structuredEffects).where(eq(structuredEffects.elementId, elementId)).orderBy(structuredEffects.position),
+  ]);
+  return { requirements, attributeBonuses, effects };
+}
+
+export async function createWeaponTechniqueLink(input: { homebrewId: number; weaponElementId: number; techniqueElementId: number }) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  await database.insert(structuredWeaponTechniqueLinks).values(input);
+  return input;
 }

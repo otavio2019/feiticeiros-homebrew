@@ -12,6 +12,7 @@ vi.mock("./db", () => ({
   addModule: vi.fn(),
   addHomebrewImage: vi.fn(),
   removeHomebrewImage: vi.fn(),
+  listStructuredElements: vi.fn(),
 }));
 
 import * as db from "./db";
@@ -97,8 +98,9 @@ describe("fluxos de dados da biblioteca de Homebrews", () => {
     const detail = { ...ownHomebrew, modules: [], elements: [], images: [] };
     vi.mocked(db.getShareableHomebrew).mockResolvedValue(ownHomebrew);
     vi.mocked(db.getHomebrewDetail).mockResolvedValue(detail as never);
+    vi.mocked(db.listStructuredElements).mockResolvedValue([]);
     const result = await appRouter.createCaller(createContext()).homebrew.shared({ shareId: "compartilhar-7" });
-    expect(result).toEqual(detail);
+    expect(result).toEqual({ ...detail, structured: [] });
     expect(db.getShareableHomebrew).toHaveBeenCalledWith("compartilhar-7");
   });
 });
