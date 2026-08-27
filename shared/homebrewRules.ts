@@ -283,7 +283,7 @@ export function buildHomebrewValidation(
 
   if (module === "shikigami") {
     const sheet = isRecord(data.shikigami) ? data.shikigami : {};
-    const grade = String(sheet.grade ?? "") as InvocationGrade;
+    const grade = String(sheet.grade ?? "quarto") as InvocationGrade;
     const type = isShikigamiType(sheet.type) ? sheet.type : "comum";
     const isKnownGrade = grade in INVOCATION_GRADE_RULES;
     const attributes = isRecord(sheet.attributes) ? sheet.attributes as Partial<Record<InvocationAttribute, number>> : {};

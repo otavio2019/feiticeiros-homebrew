@@ -125,6 +125,15 @@ describe("regras estruturadas de Homebrew", () => {
     expect(complete.every(item => item.valid)).toBe(true);
   });
 
+  it("não acusa grau ou orçamento inválidos quando a ficha de Shikigami usa seus defaults visíveis", () => {
+    const pending = buildHomebrewValidation("Shikigami de teste", "Resumo da invocação", "shikigami", false, {
+      shikigamiNarrative: "Uma invocação configurada com o estado padrão da ficha.",
+      shikigami: {},
+    });
+    expect(pending.find(item => item.key === "shikigami-grade")?.valid).toBe(true);
+    expect(pending.find(item => item.key === "shikigami-points")?.valid).toBe(true);
+  });
+
   it("valida mecânicas estruturadas sem presumir regras não documentadas", () => {
     expect(validateStructuredMechanics({ requirements: [{ type: "atributo", valueNumber: 3 }], attributeBonuses: [{ attribute: "forca", value: 2 }], effects: [{ description: "Aplica condição." }] }).valid).toBe(true);
     expect(validateStructuredMechanics({ requirements: [{ type: "", valueText: null }] }).valid).toBe(false);
