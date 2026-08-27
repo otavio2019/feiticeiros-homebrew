@@ -468,8 +468,19 @@ async function getUserByEmail(email) {
     return result[0];
   } catch (error) {
     if (String(error?.message ?? "").toLowerCase().includes("normalizedemail")) {
-      const result = await database.select().from(users).where(eq(users.email, email)).limit(1);
-      return result[0];
+      const result = await database.select({
+        id: users.id,
+        openId: users.openId,
+        name: users.name,
+        email: users.email,
+        loginMethod: users.loginMethod,
+        role: users.role,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        lastSignedIn: users.lastSignedIn
+      }).from(users).where(eq(users.email, email)).limit(1);
+      const legacyUser = result[0];
+      return legacyUser ? { ...legacyUser, normalizedEmail: null, passwordHash: null } : void 0;
     }
     throw error;
   }
