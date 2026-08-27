@@ -40,16 +40,16 @@
 - [x] Commitar as alterações validadas, fazer push para main e confirmar o conteúdo no repositório público.
 
 - [x] Escolher o provedor externo e preparar a configuração de deploy pelo GitHub.
-- [ ] Configurar banco e secrets obrigatórios sem expor credenciais.
+- [x] Configurar banco e secrets obrigatórios sem expor credenciais.
 - [x] Executar o deploy externo e validar health check, autenticação e frontend.
 - [x] Registrar no README o provedor, comandos e URL final do deploy externo.
 - [x] Implementar construtor estruturado de Shikigamis com grau, atributos, pontos, defesa, vida e habilidades.
 - [x] Validar regras verificáveis de Shikigami e manter o modo manual para exceções.
 - [x] Exibir a ficha estruturada de Shikigami na leitura compartilhável.
 - [ ] Gerar migrations Drizzle versionadas e executar o schema idempotente no MySQL Railway.
-- [ ] Auditar runtime, rotas, sessões, banco, uploads, SMTP, regras Homebrew e resíduos Manus sem alterar o projeto.
+- [x] Auditar runtime, rotas, sessões, banco, uploads, SMTP, regras Homebrew e resíduos Manus sem alterar o projeto.
 - [x] Definir e implementar o adaptador serverless tRPC/Express compatível com Vercel.
-- [ ] Configurar build, roteamento SPA, cookies HTTPS, migrations e variáveis de ambiente para Vercel.
+- [x] Configurar build, roteamento SPA, cookies HTTPS, migrations e variáveis de ambiente para Vercel.
 - [ ] Validar instalação, TypeScript, build, rotas, banco, autenticação, Cloudinary e SMTP antes do deploy.
 - [x] Publicar o projeto na URL Vercel desejada e confirmar o funcionamento externo.
 - [ ] Desativar os serviços Railway somente após a publicação Vercel ser confirmada pelo usuário.
@@ -59,7 +59,7 @@
 - [x] Corrigir e validar a interface de recuperação e redefinição de senha.
 - [x] Validar a resposta HTTP real da Function tRPC de health check.
 - [x] Consolidar o gerenciamento de dependências para instalação npm na Vercel.
-- [ ] Importar o repositório público na Vercel e configurar os ambientes sem expor segredos.
+- [x] Importar o repositório público na Vercel e configurar os ambientes sem expor segredos.
 - [x] Validar o deploy público, as rotas SPA e a sessão HTTPS na URL desejada.
 - [x] Rotacionar a credencial TiDB e cadastrar a nova DATABASE_URL no ambiente de produção da Vercel sem expor seu valor.
 - [x] Validar em navegador os modos de recuperação e redefinição de senha, inclusive as transições de interface e os estados de erro.
@@ -68,3 +68,4 @@
 - [ ] Configurar credenciais Cloudinary e SMTP na Vercel e executar testes reais de upload e entrega de recuperação de senha.
 - [ ] Rotacionar imediatamente as credenciais Cloudinary e SMTP expostas e substituir seus valores somente nos cofres seguros.
 - [ ] Confirmar por evidência de runtime Vercel o envio SMTP com credenciais rotacionadas e reexecutar a validação completa de produção.
+- [x] Restaurar compatibilidade do servidor local gerenciado sem trocar o comando `npm install` usado pela Vercel.
