@@ -31,6 +31,7 @@ import {
   LayoutDashboard,
   LibraryBig,
   Link2,
+  LogOut,
   Menu,
   MoreHorizontal,
   Plus,
@@ -48,6 +49,36 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 
 type WorkspaceTab = "visao" | "biblioteca" | "editor";
+
+export function AccountControl({
+  user,
+  loading,
+  onLogin,
+  onLogout,
+}: {
+  user: { name?: string | null } | null;
+  loading: boolean;
+  onLogin: () => void;
+  onLogout: () => Promise<void> | void;
+}) {
+  const isAuthenticated = Boolean(user);
+
+  return (
+    <div className="mt-4 flex items-center gap-3 border-t border-white/7 px-2 pt-4">
+      <div className="grid h-9 w-9 place-items-center rounded-full bg-stone-800 text-xs font-bold text-rose-200">{user?.name ? initials(user.name) : "OT"}</div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-semibold text-stone-200">{loading ? "Carregando..." : user?.name || "Visitante"}</p>
+        {isAuthenticated ? (
+          <button type="button" onClick={() => void onLogout()} className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-stone-500 hover:text-rose-200" aria-label="Sair da conta">
+            <LogOut size={12} /> Sair
+          </button>
+        ) : (
+          <button type="button" onClick={onLogin} className="mt-0.5 text-[11px] text-stone-500 hover:text-stone-300">Entrar para salvar</button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const demoHomebrews = [
   {
@@ -226,7 +257,7 @@ export function StructuredElementsPanel({ homebrewId, moduleId, moduleType }: { 
 }
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const isAuthenticated = Boolean(user);
   const [location, setLocation] = useLocation();
   const [tab, setTab] = useState<WorkspaceTab>("visao");
@@ -330,6 +361,17 @@ export default function Home() {
   const navigate = (nextTab: WorkspaceTab) => {
     setTab(nextTab);
     setMobileMenuOpen(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setActiveHomebrewId(null);
+      setTab("visao");
+      toast.success("Sessão encerrada.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível encerrar a sessão.");
+    }
   };
 
   const toggleModule = (module: HomebrewModuleType) => {
@@ -488,13 +530,7 @@ export default function Home() {
             <button onClick={() => toast.message("O mapa do projeto foi elaborado a partir dos livros enviados.")} className="mt-3 text-xs font-semibold text-rose-300 hover:text-rose-200">Consultar referência <ArrowRight className="ml-1 inline" size={13} /></button>
           </div>
 
-          <div className="mt-4 flex items-center gap-3 border-t border-white/7 px-2 pt-4">
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-stone-800 text-xs font-bold text-rose-200">{user?.name ? initials(user.name) : "OT"}</div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-stone-200">{loading ? "Carregando..." : user?.name || "Visitante"}</p>
-              <button onClick={() => isAuthenticated ? toast.message("Perfil disponível pelo menu da sua conta.") : startLogin()} className="mt-0.5 text-[11px] text-stone-500 hover:text-stone-300">{isAuthenticated ? "Seu grimório" : "Entrar para salvar"}</button>
-            </div>
-          </div>
+          <AccountControl user={user} loading={loading} onLogin={startLogin} onLogout={handleLogout} />
         </aside>
 
         <main className="min-w-0 flex-1 lg:ml-0">
