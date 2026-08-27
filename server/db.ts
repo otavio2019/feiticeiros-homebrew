@@ -81,23 +81,29 @@ export async function getUserByEmail(email: string) {
     // Fallback para bases que ainda não aplicaram a migration 0002.
     // A consulta por `email` usa apenas uma coluna presente desde a migration 0000.
     if (String(error?.message ?? "").toLowerCase().includes("normalizedemail")) {
+      // Bases anteriores podem não ter nenhuma das colunas adicionadas em 0002.
+      // Buscar apenas o identificador e o e-mail evita que o fallback falhe novamente.
       const result = await database
-        .select({
-          id: users.id,
-          openId: users.openId,
-          name: users.name,
-          email: users.email,
-          loginMethod: users.loginMethod,
-          role: users.role,
-          createdAt: users.createdAt,
-          updatedAt: users.updatedAt,
-          lastSignedIn: users.lastSignedIn,
-        })
+        .select({ id: users.id, email: users.email })
         .from(users)
         .where(eq(users.email, email))
         .limit(1);
       const legacyUser = result[0];
-      return legacyUser ? { ...legacyUser, normalizedEmail: null, passwordHash: null } : undefined;
+      return legacyUser
+        ? {
+            id: legacyUser.id,
+            openId: `legacy-${legacyUser.id}`,
+            name: null,
+            email: legacyUser.email,
+            normalizedEmail: null,
+            passwordHash: null,
+            loginMethod: null,
+            role: "user" as const,
+            createdAt: new Date(0),
+            updatedAt: new Date(0),
+            lastSignedIn: new Date(0),
+          }
+        : undefined;
     }
     throw error;
   }

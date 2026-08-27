@@ -3,6 +3,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import express from "express";
 
 // server/routers.ts
+import { TRPCError as TRPCError3 } from "@trpc/server";
 import { z as z3 } from "zod";
 
 // shared/const.ts
@@ -468,19 +469,21 @@ async function getUserByEmail(email) {
     return result[0];
   } catch (error) {
     if (String(error?.message ?? "").toLowerCase().includes("normalizedemail")) {
-      const result = await database.select({
-        id: users.id,
-        openId: users.openId,
-        name: users.name,
-        email: users.email,
-        loginMethod: users.loginMethod,
-        role: users.role,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-        lastSignedIn: users.lastSignedIn
-      }).from(users).where(eq(users.email, email)).limit(1);
+      const result = await database.select({ id: users.id, email: users.email }).from(users).where(eq(users.email, email)).limit(1);
       const legacyUser = result[0];
-      return legacyUser ? { ...legacyUser, normalizedEmail: null, passwordHash: null } : void 0;
+      return legacyUser ? {
+        id: legacyUser.id,
+        openId: `legacy-${legacyUser.id}`,
+        name: null,
+        email: legacyUser.email,
+        normalizedEmail: null,
+        passwordHash: null,
+        loginMethod: null,
+        role: "user",
+        createdAt: /* @__PURE__ */ new Date(0),
+        updatedAt: /* @__PURE__ */ new Date(0),
+        lastSignedIn: /* @__PURE__ */ new Date(0)
+      } : void 0;
     }
     throw error;
   }
@@ -1332,15 +1335,15 @@ var appRouter = router({
     }),
     login: publicProcedure.input(credentialsSchema).mutation(async ({ input, ctx }) => {
       const user = await getUserByEmail(input.email);
-      if (!user) throw new Error("E-mail ou senha inv\xE1lidos.");
+      if (!user) throw new TRPCError3({ code: "UNAUTHORIZED", message: "E-mail ou senha inv\xE1lidos." });
       if (!user.passwordHash) {
         if (user.loginMethod === "google") {
-          throw new Error("Esta conta foi criada via Google. Use 'Esqueci minha senha' para definir uma senha local.");
+          throw new TRPCError3({ code: "UNAUTHORIZED", message: "Esta conta foi criada via Google. Use 'Esqueci minha senha' para definir uma senha local." });
         }
-        throw new Error("E-mail ou senha inv\xE1lidos.");
+        throw new TRPCError3({ code: "UNAUTHORIZED", message: "E-mail ou senha inv\xE1lidos." });
       }
       if (!await verifyPassword(input.password, user.passwordHash)) {
-        throw new Error("E-mail ou senha inv\xE1lidos.");
+        throw new TRPCError3({ code: "UNAUTHORIZED", message: "E-mail ou senha inv\xE1lidos." });
       }
       setSessionCookie(ctx, await sdk.createSession(user.id));
       return user;

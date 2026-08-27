@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import * as db from "./db";
@@ -39,17 +40,17 @@ export const appRouter = router({
       }),
     login: publicProcedure.input(credentialsSchema).mutation(async ({ input, ctx }) => {
       const user = await db.getUserByEmail(input.email);
-      if (!user) throw new Error("E-mail ou senha inválidos.");
+      if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "E-mail ou senha inválidos." });
 
       if (!user.passwordHash) {
         if (user.loginMethod === "google") {
-          throw new Error("Esta conta foi criada via Google. Use 'Esqueci minha senha' para definir uma senha local.");
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Esta conta foi criada via Google. Use 'Esqueci minha senha' para definir uma senha local." });
         }
-        throw new Error("E-mail ou senha inválidos.");
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "E-mail ou senha inválidos." });
       }
 
       if (!(await verifyPassword(input.password, user.passwordHash))) {
-        throw new Error("E-mail ou senha inválidos.");
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "E-mail ou senha inválidos." });
       }
 
       setSessionCookie(ctx, await sdk.createSession(user.id));
