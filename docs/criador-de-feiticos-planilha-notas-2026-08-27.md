@@ -42,3 +42,21 @@ As características de Shikigami formam grupos selecionáveis: Movimento Alterna
 | Ações e características livres | Elementos estruturados filhos da ficha. | Sem cálculo inventado; textos adicionais permanecem manualmente identificados. |
 
 O modelo persistirá entradas e escolhas separadamente de resultados. Fórmulas só serão implementadas quando estiverem explícitas no PDF ou no livro já fornecido; qualquer caso que o PDF marque como não programado será apresentado como entrada manual, nunca como automação presumida.
+
+## Planilha Google de Shikigamis — referência prioritária
+
+A planilha indicada pelo usuário está publicamente acessível e foi baixada para análise somente de leitura. Ela tem uma aba, **Shikigamis**, com 65 linhas e 26 colunas. Esta fonte substitui o PDF como referência de implementação quando ambos divergirem; o PDF será consultado apenas para explicações que não estiverem representadas na planilha.
+
+### Mapeamento confirmado da planilha prioritária
+
+| Área | Entradas | Cálculos identificados |
+|---|---|---|
+| Estado | Máximos, curados e perdidos. | Atuais = máximos − perdidos + curados; também é exibida uma barra percentual. |
+| Informações | Grau, nível, maestria e tipo: Shikigami Comum, Shikigami de Técnica ou Manipulação de Maldições. | Tipo e grau alteram o orçamento de atributos, custo, vida, movimento e quantidade de perícias. |
+| Atributos | Força, Destreza, Constituição, Inteligência, Sabedoria e Carisma. | Modificador = piso de `(atributo − 10) / 2`; o valor-base é 8 para Comum/Manipulação e 10 para Shikigami de Técnica. |
+| Estatísticas | Constituição, atributo de defesa, grau, nível, maestria e escolhas. | Vida, custo, CD, CA e movimento usam fórmulas explícitas da planilha, incluindo as opções habilitadas. |
+| Perícias | Bônus próprio, atributo, Treinada e Maestria. | Total = bônus próprio + metade do nível + modificador do atributo + bônus do tipo + opções de característica; as vagas restantes são calculadas. |
+| Habilidades do controlador | Concentrar Poder, Fantoche Supremo, Invocações Móveis/Econômicas/Resistentes e melhorias de Resistência/Mobilidade/Precisão. | Cada opção aplica apenas os acréscimos previstos nas fórmulas da planilha. |
+| Características | Movimento/Defesa alternativa, dois bônus em perícia, tamanho, Defensor, Robustez, Móvel e Perito. | Características alteram atributo-base de movimento/defesa, perícias, vida, CA e movimento; o tamanho aplica modificadores opostos a ataques e testes de resistência. |
+
+As opções validadas na planilha incluem os cinco graus, os três tipos de Shikigami, os seis atributos, seis tamanhos e seleção de perícias para características. A implementação deve preservar essas listas fechadas e permitir sobrescrita manual apenas com marcação explícita.

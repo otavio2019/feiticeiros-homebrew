@@ -111,21 +111,146 @@ export function calculateInvocationStats(
   };
 }
 
+export const SHIKIGAMI_TYPES = ["comum", "tecnica", "manipulacao"] as const;
+export type ShikigamiType = (typeof SHIKIGAMI_TYPES)[number];
+export const SHIKIGAMI_TYPE_LABELS: Record<ShikigamiType, string> = {
+  comum: "Shikigami Comum",
+  tecnica: "Shikigami de Técnica",
+  manipulacao: "Manipulação de Maldições",
+};
+
+export function isShikigamiType(value: unknown): value is ShikigamiType {
+  return typeof value === "string" && (SHIKIGAMI_TYPES as readonly string[]).includes(value);
+}
+
+export type ShikigamiControllerOption = "concentrarPoder" | "fantocheSupremo" | "invocacoesMoveis" | "invocacoesEconomicas" | "invocacoesResistentes" | "melhoriaResistencia" | "melhoriaMobilidade" | "melhoriaPrecisao";
+export type ShikigamiTrait = "movimentoAlternativo" | "defesaAlternativa" | "bonusPericiaA" | "tamanho" | "defensor" | "bonusPericiaB" | "robustez" | "movel" | "perito";
+export type ShikigamiSize = "minusculo" | "pequeno" | "medio" | "grande" | "enorme" | "colossal";
+
+export const SHIKIGAMI_GRADE_PROGRESSIONS = {
+  quarto: { skillBonus: 2, defenderArmor: 2, robustnessHealth: 5, mobileMovement: 3 },
+  terceiro: { skillBonus: 4, defenderArmor: 4, robustnessHealth: 10, mobileMovement: 4.5 },
+  segundo: { skillBonus: 6, defenderArmor: 6, robustnessHealth: 15, mobileMovement: 6 },
+  primeiro: { skillBonus: 8, defenderArmor: 8, robustnessHealth: 25, mobileMovement: 7.5 },
+  especial: { skillBonus: 10, defenderArmor: 12, robustnessHealth: 40, mobileMovement: 9 },
+} as const;
+
+export function calculateShikigamiReferenceStats(input: {
+  grade: InvocationGrade;
+  type?: ShikigamiType;
+  attributes: Partial<Record<InvocationAttribute, number>>;
+  userLevel: number;
+  mastery: number;
+  controllerOptions?: Partial<Record<ShikigamiControllerOption, boolean>>;
+  traits?: Partial<Record<ShikigamiTrait, boolean>>;
+  defenseAttribute?: InvocationAttribute;
+  movementAttribute?: InvocationAttribute;
+  size?: ShikigamiSize;
+  selectedSkills?: number;
+  additionalEntryCount?: number;
+}) {
+  const level = Math.max(1, Math.floor(Number(input.userLevel) || 1));
+  const mastery = Math.max(0, Number(input.mastery) || 0);
+  const type = input.type ?? "comum";
+  const attributes = input.attributes ?? {};
+  const attributeBase = type === "tecnica" ? 10 : 8;
+  const attributePointsByGrade: Record<ShikigamiType, Record<InvocationGrade, number>> = {
+    comum: { quarto: 10, terceiro: 15, segundo: 20, primeiro: 30, especial: 40 },
+    tecnica: { quarto: 10, terceiro: 20, segundo: 30, primeiro: 40, especial: 60 },
+    manipulacao: { quarto: 10, terceiro: 15, segundo: 20, primeiro: 30, especial: 40 },
+  };
+  const gradeBonus: Record<InvocationGrade, number> = { quarto: 1, terceiro: 2, segundo: 3, primeiro: 4, especial: 5 };
+  const traitProgression = SHIKIGAMI_GRADE_PROGRESSIONS[input.grade];
+  const valueOf = (attribute: InvocationAttribute) => Math.max(attributeBase, Number(attributes[attribute] ?? attributeBase));
+  const modifierOf = (attribute: InvocationAttribute) => calculateAttributeModifier(valueOf(attribute));
+  const constitution = valueOf("constituicao");
+  const defenseAttribute = input.defenseAttribute ?? "destreza";
+  const movementAttribute = input.movementAttribute ?? "destreza";
+  const defenseValue = valueOf(defenseAttribute);
+  const controller = input.controllerOptions ?? {};
+  const traits = input.traits ?? {};
+  const hasPrimarySkillBonus = Boolean(traits.bonusPericiaA || (traits as Record<string, boolean>).bonusPericia);
+  const supreme = Boolean(controller.fantocheSupremo);
+  const concentrateHealthBonus = controller.concentrarPoder ? (level >= 18 ? 50 : level >= 12 ? 30 : level >= 6 ? 15 : 10) : 0;
+  const concentrateDefenseBonus = controller.concentrarPoder ? (level >= 18 ? 6 : level >= 12 ? 4 : level >= 6 ? 2 : 2) : 0;
+  const resistanceBonus = controller.melhoriaResistencia ? (level >= 18 ? 5 : level >= 8 ? 3 : 2) : 0;
+  const precisionCdBonus = controller.melhoriaPrecisao ? (level >= 18 ? 5 : level >= 8 ? 3 : 2) : 0;
+  const globalMobility = controller.invocacoesMoveis ? (level >= 30 ? 10.5 : level >= 25 ? 9 : level >= 20 ? 7.5 : level >= 15 ? 6 : level >= 10 ? 4.5 : level >= 5 ? 3 : 1.5) : 0;
+  const controllerMobility = controller.melhoriaMobilidade ? (level >= 16 ? 9 : level >= 12 ? 7.5 : level >= 8 ? 6 : level >= 4 ? 4.5 : 3) : 0;
+  const healthBaseByType: Record<ShikigamiType, Record<InvocationGrade, [number, number]>> = {
+    comum: { quarto: [5, 2], terceiro: [10, 3], segundo: [15, 4], primeiro: [20, 5], especial: [30, 6] },
+    tecnica: { quarto: [5, 2], terceiro: [10, 3], segundo: [15, 4], primeiro: [20, 5], especial: [30, 6] },
+    manipulacao: { quarto: [10, 2], terceiro: [20, 3], segundo: [30, 4], primeiro: [40, 5], especial: [60, 6] },
+  };
+  const [healthFixed, healthConstitution] = healthBaseByType[type][input.grade];
+  const health = Math.round((healthFixed + constitution * healthConstitution) / 5) * 5
+    + (traits.robustez ? traitProgression.robustnessHealth : 0)
+    + (controller.invocacoesResistentes ? mastery * 5 : 0)
+    + (supreme ? mastery * 5 : 0)
+    + concentrateHealthBonus;
+  const defense = 10 + Math.floor(defenseValue / 2) + gradeBonus[input.grade]
+    + (traits.defensor ? traitProgression.defenderArmor : 0)
+    + resistanceBonus
+    + (supreme ? mastery * 2 : 0)
+    + concentrateDefenseBonus;
+  const baseMovement = type === "tecnica" ? 7.5 : 6;
+  const movementModifier = Math.max(0, modifierOf(traits.movimentoAlternativo ? movementAttribute : "destreza")) * 1.5;
+  const movement = baseMovement + movementModifier + (traits.movel ? traitProgression.mobileMovement : 0) + globalMobility + controllerMobility + (supreme ? 4.5 : 0);
+  const additionalEntryCount = Math.max(0, Number(input.additionalEntryCount) || 0);
+  const [costBase, costThreshold] = type === "tecnica"
+    ? ({ quarto: [2, 3], terceiro: [5, 4], segundo: [8, 5], primeiro: [10, 6], especial: [12, 7] } as Record<InvocationGrade, [number, number]>)[input.grade]
+    : ({ quarto: [2, 2], terceiro: [4, 2], segundo: [6, 3], primeiro: [8, 3], especial: [12, 4] } as Record<InvocationGrade, [number, number]>)[input.grade];
+  const cost = costBase + Math.max(0, additionalEntryCount - costThreshold) - (controller.invocacoesEconomicas ? 2 : 0) + (supreme ? 10 : 0);
+  const skillBase = type === "tecnica" ? 3 : 2;
+  const mentalModifier = Math.max(0, modifierOf("inteligencia"), modifierOf("sabedoria"));
+  const selectedSkills = Math.max(0, Number(input.selectedSkills) || 0);
+  const skillSlots = skillBase + mentalModifier + (gradeBonus[input.grade] - 1) - selectedSkills + (traits.perito ? 2 : 0);
+  const difficulty = 10 + Math.max(1, Math.floor(level / 2)) + Math.max(...INVOCATION_ATTRIBUTES.map(modifierOf)) + gradeBonus[input.grade] + precisionCdBonus;
+  return {
+    type,
+    attributeBase,
+    attributePoints: attributePointsByGrade[type][input.grade],
+    attributeCap: null,
+    health,
+    defense,
+    movement,
+    cost,
+    difficulty,
+    precisionCdBonus,
+    skillSlots,
+    skillBonusPerSelection: traitProgression.skillBonus,
+    skillBonus: (hasPrimarySkillBonus ? traitProgression.skillBonus : 0) + (traits.bonusPericiaB ? traitProgression.skillBonus : 0),
+    defenderArmor: traits.defensor ? traitProgression.defenderArmor : 0,
+    skillTypeBonus: type === "tecnica" ? cost : mastery,
+    skillMasteryBonus: type === "tecnica" ? cost + Math.floor(mastery / 2) : Math.floor(mastery * 1.5),
+    size: input.size ?? "medio",
+    sizeAttackModifier: ({ minusculo: -5, pequeno: -2, medio: 0, grande: 2, enorme: 5, colossal: 10 } as Record<ShikigamiSize, number>)[input.size ?? "medio"],
+    sizeResistanceModifier: ({ minusculo: 5, pequeno: 2, medio: 0, grande: -2, enorme: -5, colossal: -10 } as Record<ShikigamiSize, number>)[input.size ?? "medio"],
+    resistanceRequiresManualEntry: Boolean(controller.melhoriaResistencia),
+    attackBonusRequiresManualEntry: Boolean(controller.melhoriaPrecisao),
+  };
+}
+
 export function validateInvocationSheet(
   grade: InvocationGrade,
   attributes: Partial<Record<InvocationAttribute, number>>,
   manualMode = false,
+  type: ShikigamiType = "comum",
 ) {
-  const rule = INVOCATION_GRADE_RULES[grade];
-  const values = INVOCATION_ATTRIBUTES.map(attribute => Math.max(0, Number(attributes[attribute] ?? 0)));
-  const allocatedPoints = values.reduce((total, value) => total + value, 0);
-  const withinAttributeCap = values.every(value => value <= rule.attributeCap);
+  const attributeBase = type === "tecnica" ? 10 : 8;
+  const pointBudget: Record<ShikigamiType, Record<InvocationGrade, number>> = {
+    comum: { quarto: 10, terceiro: 15, segundo: 20, primeiro: 30, especial: 40 },
+    tecnica: { quarto: 10, terceiro: 20, segundo: 30, primeiro: 40, especial: 60 },
+    manipulacao: { quarto: 10, terceiro: 15, segundo: 20, primeiro: 30, especial: 40 },
+  };
+  const values = INVOCATION_ATTRIBUTES.map(attribute => Math.max(attributeBase, Number(attributes[attribute] ?? attributeBase)));
+  const allocatedPoints = values.reduce((total, value) => total + Math.max(0, value - attributeBase), 0);
   return {
     allocatedPoints,
-    pointBudget: rule.points,
-    attributeCap: rule.attributeCap,
-    withinPointBudget: manualMode || allocatedPoints <= rule.points,
-    withinAttributeCap: manualMode || withinAttributeCap,
+    pointBudget: pointBudget[type][grade],
+    attributeBase,
+    withinPointBudget: manualMode || allocatedPoints <= pointBudget[type][grade],
+    withinAttributeCap: true,
   };
 }
 
@@ -159,16 +284,16 @@ export function buildHomebrewValidation(
   if (module === "shikigami") {
     const sheet = isRecord(data.shikigami) ? data.shikigami : {};
     const grade = String(sheet.grade ?? "") as InvocationGrade;
+    const type = isShikigamiType(sheet.type) ? sheet.type : "comum";
     const isKnownGrade = grade in INVOCATION_GRADE_RULES;
     const attributes = isRecord(sheet.attributes) ? sheet.attributes as Partial<Record<InvocationAttribute, number>> : {};
     const validation = isKnownGrade
-      ? validateInvocationSheet(grade, attributes, manualMode)
+      ? validateInvocationSheet(grade, attributes, manualMode, type)
       : null;
     base.push(
       { key: "shikigami-name", label: "Nome do Shikigami", valid: String(sheet.name ?? "").trim().length >= 3, message: "Informe um nome para o Shikigami." },
       { key: "shikigami-grade", label: "Grau", valid: isKnownGrade, message: "Escolha um grau de invocação válido." },
       { key: "shikigami-points", label: "Pontos de atributo", valid: Boolean(validation?.withinPointBudget), message: "A distribuição excede os pontos previstos para este grau." },
-      { key: "shikigami-cap", label: "Limite por atributo", valid: Boolean(validation?.withinAttributeCap), message: "Um atributo excede o limite previsto para este grau." },
     );
   }
 

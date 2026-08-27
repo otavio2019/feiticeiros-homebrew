@@ -135,7 +135,13 @@
 - [ ] Normalizar Penalidades e os vínculos de Características/Talentos liberados por Evolução de Origem, com migration Drizzle revisada.
 - [ ] Substituir campos narrativos de benefício, restrição, propriedade e requisito pelos grupos estruturados exigidos dentro de Origem, Mecânica e Arma.
 - [ ] Tornar os tipos oficiais de dano selecionáveis para Técnica e Arma, preservando uma alternativa manual marcada quando necessário.
-- [ ] Analisar CriadordeFeitiços.xlsx como fonte de verdade do formato desejado, incluindo abas, campos, validações e fórmulas.
+- [x] Analisar CriadordeFeitiços.xlsx como fonte de verdade do formato desejado, incluindo abas, campos, validações e fórmulas.
 - [ ] Replanejar a modelagem e o editor para reproduzir o fluxo da planilha, descartando os encaixes da especificação textual que não corresponderem a ela.
-- [ ] Analisar CópiadeCópia.pdf como fonte de verdade do formato, campos, limites e cálculos do criador de Shikigami.
+- [x] Analisar CópiadeCópia.pdf como fonte de verdade do formato, campos, limites e cálculos do criador de Shikigami.
 - [ ] Reestruturar o módulo Shikigami em seções e resultados automáticos que sigam o modelo do PDF, mantendo sobrescritas manuais identificadas.
+- [ ] Implementar e testar somente as progressões de Shikigami explicitamente descritas no PDF: Fantoche Supremo, Invocações Resistentes, Mobilidade, Precisão e características por grau.
+- [x] Analisar a planilha Google de Shikigami indicada pelo usuário como fonte prioritária de campos, tabelas, fórmulas e fluxo.
+- [ ] Revisar o criador de Shikigami publicado para seguir a planilha Google quando ela divergir do PDF usado como referência complementar.
+- [x] Substituir as fórmulas aproximadas de vida, custo, CD, CA, movimento, orçamento de atributos e perícias pelas fórmulas verificadas na planilha Google de Shikigamis.
+- [x] Modelar no criador as opções da planilha Google: três tipos, duas características de bônus em perícia, tamanho e especialização de perícia.
+- [x] Fazer o custo do Shikigami variar pela quantidade de ações e características preenchidas, e expor os modificadores opostos de tamanho presentes na planilha Google.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateAttributeModifier,
+  calculateShikigamiReferenceStats,
   buildHomebrewValidation,
   calculateInvocationStats,
   validateInvocationSheet,
@@ -18,6 +19,51 @@ describe("regras estruturadas de Homebrew", () => {
   it("mantém os quinze tipos de dano oficiais como opções estruturadas", () => {
     expect(STRUCTURED_DAMAGE_TYPES).toHaveLength(15);
     expect(STRUCTURED_DAMAGE_TYPES.map(item => item.value)).toEqual(["cortante", "perfurante", "impacto", "acido", "congelante", "chocante", "queimante", "sonico", "alma", "energia-reversa", "energetico", "psiquico", "radiante", "necrotico", "venenoso"]);
+  });
+
+  it("calcula apenas as progressões de Shikigami descritas no modelo de referência", () => {
+    const calculated = calculateShikigamiReferenceStats({
+      grade: "quarto",
+      attributes: { constituicao: 8, destreza: 8 },
+      userLevel: 10,
+      mastery: 2,
+      controllerOptions: { fantocheSupremo: true, invocacoesResistentes: true, melhoriaMobilidade: true, melhoriaPrecisao: true },
+      traits: { robustez: true, movel: true, perito: true, defensor: true, bonusPericia: true },
+    });
+    expect(calculated.cost).toBe(12);
+    expect(calculated.health).toBe(45);
+    expect(calculated.defense).toBe(21);
+    expect(calculated.movement).toBe(19.5);
+    expect(calculated.difficulty).toBe(18);
+    expect(calculated.precisionCdBonus).toBe(3);
+    expect(calculated.skillSlots).toBe(4);
+    expect(calculated.skillBonus).toBe(2);
+    expect(calculated.defenderArmor).toBe(2);
+  });
+
+  it("aplica tipo, registros adicionais, tamanho e especialização como na planilha Google", () => {
+    const calculated = calculateShikigamiReferenceStats({
+      grade: "terceiro",
+      type: "tecnica",
+      attributes: { forca: 10, destreza: 12, constituicao: 10, inteligencia: 14, sabedoria: 10, carisma: 10 },
+      userLevel: 8,
+      mastery: 3,
+      selectedSkills: 2,
+      additionalEntryCount: 6,
+      size: "grande",
+      controllerOptions: { invocacoesEconomicas: true, melhoriaResistencia: true },
+      traits: { bonusPericiaA: true, bonusPericiaB: true, tamanho: true },
+    });
+    expect(calculated.attributeBase).toBe(10);
+    expect(calculated.attributePoints).toBe(20);
+    expect(calculated.cost).toBe(5);
+    expect(calculated.difficulty).toBe(18);
+    expect(calculated.defense).toBe(21);
+    expect(calculated.movement).toBe(9);
+    expect(calculated.skillSlots).toBe(4);
+    expect(calculated.skillBonusPerSelection).toBe(4);
+    expect(calculated.sizeAttackModifier).toBe(2);
+    expect(calculated.sizeResistanceModifier).toBe(-2);
   });
 
   it("calcula modificadores e CD da técnica", () => {
@@ -54,15 +100,15 @@ describe("regras estruturadas de Homebrew", () => {
   });
 
   it("valida a distribuição estruturada de atributos do Shikigami", () => {
-    const allowed = validateInvocationSheet("quarto", { forca: 4, destreza: 3, constituicao: 3 });
+    const allowed = validateInvocationSheet("quarto", { forca: 13, destreza: 11, constituicao: 10 });
     expect(allowed.allocatedPoints).toBe(10);
     expect(allowed.withinPointBudget).toBe(true);
     expect(allowed.withinAttributeCap).toBe(true);
 
-    const invalid = validateInvocationSheet("quarto", { forca: 17, destreza: 4 });
+    const invalid = validateInvocationSheet("quarto", { forca: 19, destreza: 10 });
     expect(invalid.withinPointBudget).toBe(false);
-    expect(invalid.withinAttributeCap).toBe(false);
-    expect(validateInvocationSheet("quarto", { forca: 17, destreza: 4 }, true).withinPointBudget).toBe(true);
+    expect(invalid.withinAttributeCap).toBe(true);
+    expect(validateInvocationSheet("quarto", { forca: 19, destreza: 10 }, true).withinPointBudget).toBe(true);
   });
 
   it("gera pendências contextuais para os campos essenciais do construtor", () => {

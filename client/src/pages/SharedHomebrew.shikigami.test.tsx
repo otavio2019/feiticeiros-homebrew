@@ -1,0 +1,31 @@
+// @vitest-environment jsdom
+import { render, screen } from "@testing-library/react";
+import React from "react";
+import { describe, expect, it } from "vitest";
+import { ShikigamiReadCard } from "./SharedHomebrew";
+
+describe("ShikigamiReadCard", () => {
+  it("recalcula a ficha compartilhada com o tipo, estado e escolhas da planilha Google", () => {
+    render(<ShikigamiReadCard sheet={{
+      name: "Corvo de Selos",
+      grade: "terceiro",
+      type: "tecnica",
+      userLevel: 8,
+      mastery: 3,
+      attributes: { forca: 10, destreza: 12, constituicao: 10, inteligencia: 14, sabedoria: 10, carisma: 10 },
+      lostHealth: 5,
+      controllerOptions: { invocacoesEconomicas: true, melhoriaResistencia: true },
+      traits: { tamanho: true, bonusPericiaA: true },
+      size: "grande",
+      bonusSkillA: "feiticaria",
+      abilities: [{ id: "ac-1", kind: "acao", name: "Selo Cortante", description: "Um ataque de selo amaldiçoado." }],
+    }} />);
+
+    expect(screen.getByText("Corvo de Selos")).toBeTruthy();
+    expect(screen.getByText(/Shikigami de Técnica/)).toBeTruthy();
+    expect(screen.getByText("3 PE")).toBeTruthy();
+    expect(screen.getByText("21")).toBeTruthy();
+    expect(screen.getByText(/Tamanho: ataques \+2; resistências -2/)).toBeTruthy();
+    expect(screen.getByText("Selo Cortante")).toBeTruthy();
+  });
+});
