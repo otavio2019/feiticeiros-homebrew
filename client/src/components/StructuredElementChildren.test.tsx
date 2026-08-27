@@ -22,11 +22,13 @@ vi.mock("@/lib/trpc", () => {
       homebrew: {
         structuredList: { useQuery: () => ({ data: [], refetch: mocks.refetch }) },
         structuredMechanics: { useQuery: () => ({ data: { requirements: [], attributeBonuses: [], effects: [] }, refetch: mocks.refetch }) },
+        structuredEvolutionUnlocks: { useQuery: () => ({ data: [], refetch: mocks.refetch }) },
         structuredCreate: { useMutation: (options: any) => mutation("structuredCreate", options) },
         structuredUpdate: { useMutation: (options: any) => mutation("structuredUpdate", options) },
         structuredDelete: { useMutation: (options: any) => mutation("structuredDelete", options) },
         structuredReorder: { useMutation: (options: any) => mutation("structuredReorder", options) },
         structuredSaveMechanics: { useMutation: (options: any) => mutation("structuredSaveMechanics", options) },
+        structuredEvolutionUnlocksReplace: { useMutation: (options: any) => mutation("structuredEvolutionUnlocksReplace", options) },
       },
     },
   };

@@ -129,3 +129,9 @@
 - [ ] Concluir e validar a hierarquia pai-filho de Origem e Arma, incluindo duplicação, exclusão em cascata e reordenação entre irmãos.
 - [ ] Concluir e validar o editor e a leitura pública de Ganhos e Perdas de Votos em coleções separadas.
 - [ ] Cobrir a nova estrutura com testes de frontend, contratos tRPC, build Vercel, auditoria TiDB e fluxo de produção reversível.
+- [ ] Reavaliar integralmente o modelo enviado pelo usuário e identificar, por seção, onde o editor atual ainda usa uma estrutura diferente da solicitada.
+- [ ] Substituir os fluxos genéricos que divergirem do modelo de referência por blocos de formulário, relações e leitura pública fiéis à especificação.
+- [ ] Revalidar e republicar somente após a confirmação visual de que o construtor segue o modelo solicitado.
+- [ ] Normalizar Penalidades e os vínculos de Características/Talentos liberados por Evolução de Origem, com migration Drizzle revisada.
+- [ ] Substituir campos narrativos de benefício, restrição, propriedade e requisito pelos grupos estruturados exigidos dentro de Origem, Mecânica e Arma.
+- [ ] Tornar os tipos oficiais de dano selecionáveis para Técnica e Arma, preservando uma alternativa manual marcada quando necessário.

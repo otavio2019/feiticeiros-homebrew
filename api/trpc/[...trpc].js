@@ -104,6 +104,7 @@ var homebrewElementType = mysqlEnum("homebrewElementType", [
   "caracteristica",
   "talento",
   "evolucao",
+  "penalidade",
   "propriedade"
 ]);
 var imageSource = mysqlEnum("imageSource", ["url", "upload"]);
@@ -325,6 +326,18 @@ var structuredEvolutions = mysqlTable(
   },
   (table) => [index("evolutions_element_position_idx").on(table.elementId, table.position)]
 );
+var structuredEvolutionUnlocks = mysqlTable(
+  "structuredEvolutionUnlocks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    evolutionElementId: int("evolutionElementId").notNull().references(() => homebrewStructuredElements.id),
+    unlockedElementId: int("unlockedElementId").notNull().references(() => homebrewStructuredElements.id)
+  },
+  (table) => [
+    uniqueIndex("evolution_unlock_unique").on(table.evolutionElementId, table.unlockedElementId),
+    index("evolution_unlock_evolution_idx").on(table.evolutionElementId)
+  ]
+);
 var structuredWeaponTechniqueLinks = mysqlTable(
   "structuredWeaponTechniqueLinks",
   {
@@ -349,6 +362,24 @@ var HOME_BREW_MODULES = [
   "especializacoes",
   "outros"
 ];
+var STRUCTURED_DAMAGE_TYPES = [
+  { value: "cortante", label: "Cortante" },
+  { value: "perfurante", label: "Perfurante" },
+  { value: "impacto", label: "Impacto" },
+  { value: "acido", label: "\xC1cido" },
+  { value: "congelante", label: "Congelante" },
+  { value: "chocante", label: "Chocante" },
+  { value: "queimante", label: "Queimante" },
+  { value: "sonico", label: "S\xF4nico" },
+  { value: "alma", label: "na Alma" },
+  { value: "energia-reversa", label: "Energia Reversa" },
+  { value: "energetico", label: "Energ\xE9tico" },
+  { value: "psiquico", label: "Ps\xEDquico" },
+  { value: "radiante", label: "Radiante" },
+  { value: "necrotico", label: "Necr\xF3tico" },
+  { value: "venenoso", label: "Venenoso" }
+];
+var STRUCTURED_DAMAGE_TYPE_VALUES = STRUCTURED_DAMAGE_TYPES.map((item) => item.value);
 function validateStructuredMechanics(input, manualMode = false) {
   const errors = [];
   for (const requirement of input.requirements ?? []) {
@@ -691,6 +722,12 @@ async function duplicateStructuredEntities(database, sourceHomebrewId, clonedHom
     const techniqueElementId = structuredElementMap.get(link.techniqueElementId);
     if (weaponElementId && techniqueElementId) await database.insert(structuredWeaponTechniqueLinks).values({ homebrewId: clonedHomebrewId, weaponElementId, techniqueElementId });
   }
+  const evolutionUnlocks = await database.select().from(structuredEvolutionUnlocks).innerJoin(homebrewStructuredElements, eq(structuredEvolutionUnlocks.evolutionElementId, homebrewStructuredElements.id)).where(eq(homebrewStructuredElements.homebrewId, sourceHomebrewId));
+  for (const row of evolutionUnlocks) {
+    const evolutionElementId = structuredElementMap.get(row.structuredEvolutionUnlocks.evolutionElementId);
+    const unlockedElementId = structuredElementMap.get(row.structuredEvolutionUnlocks.unlockedElementId);
+    if (evolutionElementId && unlockedElementId) await database.insert(structuredEvolutionUnlocks).values({ evolutionElementId, unlockedElementId });
+  }
   return structuredElementMap;
 }
 async function duplicateHomebrew(source, ownerId, shareId) {
@@ -869,6 +906,7 @@ async function deleteStructuredElement(id) {
     await tx.delete(structuredConditions).where(eq(structuredConditions.elementId, elementId));
     await tx.delete(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, elementId));
     await tx.delete(structuredEvolutions).where(eq(structuredEvolutions.elementId, elementId));
+    await tx.delete(structuredEvolutionUnlocks).where(or(eq(structuredEvolutionUnlocks.evolutionElementId, elementId), eq(structuredEvolutionUnlocks.unlockedElementId, elementId)));
     await tx.delete(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, elementId));
   };
   await database.transaction(async (tx) => {
@@ -936,12 +974,35 @@ async function updateWeaponTechniqueLink(input) {
   await database.update(structuredWeaponTechniqueLinks).set(changes).where(and(eq(structuredWeaponTechniqueLinks.homebrewId, homebrewId), eq(structuredWeaponTechniqueLinks.id, id)));
   return input;
 }
+async function listEvolutionUnlocks(homebrewId, evolutionElementId) {
+  const database = await getDb();
+  if (!database) return [];
+  const evolution = await assertStructuredElementForHomebrew(homebrewId, evolutionElementId);
+  if (evolution.type !== "evolucao") throw new Error("O elemento informado n\xE3o \xE9 uma Evolu\xE7\xE3o.");
+  return database.select().from(structuredEvolutionUnlocks).where(eq(structuredEvolutionUnlocks.evolutionElementId, evolutionElementId));
+}
+async function replaceEvolutionUnlocks(homebrewId, evolutionElementId, unlockedElementIds) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indispon\xEDvel.");
+  const evolution = await assertStructuredElementForHomebrew(homebrewId, evolutionElementId);
+  if (evolution.type !== "evolucao") throw new Error("O elemento informado n\xE3o \xE9 uma Evolu\xE7\xE3o.");
+  const uniqueIds = Array.from(new Set(unlockedElementIds));
+  for (const unlockedElementId of uniqueIds) {
+    const target = await assertStructuredElementForHomebrew(homebrewId, unlockedElementId);
+    if (target.parentElementId !== evolution.parentElementId || !["caracteristica", "talento"].includes(target.type)) throw new Error("Uma Evolu\xE7\xE3o s\xF3 pode liberar Caracter\xEDsticas ou Talentos da mesma Origem.");
+  }
+  await database.transaction(async (tx) => {
+    await tx.delete(structuredEvolutionUnlocks).where(eq(structuredEvolutionUnlocks.evolutionElementId, evolutionElementId));
+    if (uniqueIds.length) await tx.insert(structuredEvolutionUnlocks).values(uniqueIds.map((unlockedElementId) => ({ evolutionElementId, unlockedElementId })));
+  });
+  return listEvolutionUnlocks(homebrewId, evolutionElementId);
+}
 async function listStructuredElementsForShare(homebrewId) {
   const database = await getDb();
   if (!database) return [];
   const elements = await database.select().from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, homebrewId)).orderBy(homebrewStructuredElements.position);
   return Promise.all(elements.map(async (element) => {
-    const [attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions, images] = await Promise.all([
+    const [attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions, evolutionUnlocks, images] = await Promise.all([
       database.select().from(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, element.id)),
       database.select().from(structuredRequirements).where(eq(structuredRequirements.elementId, element.id)).orderBy(structuredRequirements.position),
       database.select().from(structuredEffects).where(eq(structuredEffects.elementId, element.id)).orderBy(structuredEffects.position),
@@ -951,9 +1012,10 @@ async function listStructuredElementsForShare(homebrewId) {
       database.select().from(structuredConditions).where(eq(structuredConditions.elementId, element.id)).orderBy(structuredConditions.position),
       database.select().from(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, element.id)).orderBy(structuredVowExchanges.position),
       database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, element.id)).orderBy(structuredEvolutions.position),
+      database.select().from(structuredEvolutionUnlocks).where(eq(structuredEvolutionUnlocks.evolutionElementId, element.id)),
       database.select().from(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.elementId, element.id)))
     ]);
-    return { ...element, images, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions } };
+    return { ...element, images, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions, evolutionUnlocks } };
   }));
 }
 async function reorderStructuredElement(id, direction) {
@@ -1302,7 +1364,7 @@ var homebrewRouter = router({
   structuredCreate: protectedProcedure.input(z2.object({
     homebrewId: z2.number().int().positive(),
     moduleId: z2.number().int().positive(),
-    type: z2.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro", "caracteristica", "talento", "evolucao", "propriedade"]),
+    type: z2.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro", "caracteristica", "talento", "evolucao", "penalidade", "propriedade"]),
     name: z2.string().trim().min(1).max(160),
     description: z2.string().trim().min(1),
     parentElementId: z2.number().int().positive().nullable().optional(),
@@ -1318,7 +1380,7 @@ var homebrewRouter = router({
     homebrewId: z2.number().int().positive(),
     id: z2.number().int().positive(),
     moduleId: z2.number().int().positive().optional(),
-    type: z2.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro", "caracteristica", "talento", "evolucao", "propriedade"]).optional(),
+    type: z2.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro", "caracteristica", "talento", "evolucao", "penalidade", "propriedade"]).optional(),
     name: z2.string().trim().min(1).max(160).optional(),
     description: z2.string().trim().min(1).optional(),
     parentElementId: z2.number().int().positive().nullable().optional(),
@@ -1368,6 +1430,17 @@ var homebrewRouter = router({
     await assertStructuredElementForHomebrew(input.homebrewId, input.weaponElementId);
     await assertStructuredElementForHomebrew(input.homebrewId, input.techniqueElementId);
     return updateWeaponTechniqueLink(input);
+  }),
+  structuredEvolutionUnlocks: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), evolutionElementId: z2.number().int().positive() })).query(async ({ ctx, input }) => {
+    await assertOwner(input.homebrewId, ctx.user.id);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.evolutionElementId);
+    return listEvolutionUnlocks(input.homebrewId, input.evolutionElementId);
+  }),
+  structuredEvolutionUnlocksReplace: protectedProcedure.input(z2.object({ homebrewId: z2.number().int().positive(), evolutionElementId: z2.number().int().positive(), unlockedElementIds: z2.array(z2.number().int().positive()).max(100) })).mutation(async ({ ctx, input }) => {
+    await assertOwner(input.homebrewId, ctx.user.id);
+    await assertStructuredElementForHomebrew(input.homebrewId, input.evolutionElementId);
+    for (const unlockedElementId of input.unlockedElementIds) await assertStructuredElementForHomebrew(input.homebrewId, unlockedElementId);
+    return replaceEvolutionUnlocks(input.homebrewId, input.evolutionElementId, input.unlockedElementIds);
   }),
   structuredSaveExtendedMechanics: protectedProcedure.input(z2.object({
     homebrewId: z2.number().int().positive(),

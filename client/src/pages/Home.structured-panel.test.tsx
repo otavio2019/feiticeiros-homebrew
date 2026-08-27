@@ -48,6 +48,7 @@ vi.mock("@/lib/trpc", () => {
             refetch: mocks.mechanicsRefetch,
           }),
         },
+        structuredEvolutionUnlocks: { useQuery: () => ({ data: [], refetch: mocks.mechanicsRefetch }) },
         structuredWeaponTechniqueLinks: { useQuery: () => ({ data: [], refetch: mocks.linksRefetch }) },
         uploadImage: { useMutation: (options: any) => mutation("uploadImage", options) },
         addImageUrl: { useMutation: (options: any) => mutation("addImageUrl", options) },
@@ -61,6 +62,7 @@ vi.mock("@/lib/trpc", () => {
         structuredReorder: { useMutation: (options: any) => mutation("structuredReorder", options) },
         structuredSaveMechanics: { useMutation: (options: any) => mutation("structuredSaveMechanics", options) },
         structuredSaveExtendedMechanics: { useMutation: (options: any) => mutation("structuredSaveExtendedMechanics", options) },
+        structuredEvolutionUnlocksReplace: { useMutation: (options: any) => mutation("structuredEvolutionUnlocksReplace", options) },
       },
     },
   };

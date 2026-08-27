@@ -132,7 +132,7 @@ export const homebrewRouter = router({
     .input(z.object({
       homebrewId: z.number().int().positive(),
       moduleId: z.number().int().positive(),
-      type: z.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro", "caracteristica", "talento", "evolucao", "propriedade"]),
+      type: z.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro", "caracteristica", "talento", "evolucao", "penalidade", "propriedade"]),
       name: z.string().trim().min(1).max(160),
       description: z.string().trim().min(1),
       parentElementId: z.number().int().positive().nullable().optional(),
@@ -151,7 +151,7 @@ export const homebrewRouter = router({
       homebrewId: z.number().int().positive(),
       id: z.number().int().positive(),
       moduleId: z.number().int().positive().optional(),
-      type: z.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro", "caracteristica", "talento", "evolucao", "propriedade"]).optional(),
+      type: z.enum(["origem", "shikigami", "voto", "tecnica", "feitico", "arma", "mecanica", "aptidao", "especializacao", "outro", "caracteristica", "talento", "evolucao", "penalidade", "propriedade"]).optional(),
       name: z.string().trim().min(1).max(160).optional(),
       description: z.string().trim().min(1).optional(),
       parentElementId: z.number().int().positive().nullable().optional(),
@@ -219,6 +219,21 @@ export const homebrewRouter = router({
       await db.assertStructuredElementForHomebrew(input.homebrewId, input.weaponElementId);
       await db.assertStructuredElementForHomebrew(input.homebrewId, input.techniqueElementId);
       return db.updateWeaponTechniqueLink(input);
+    }),
+  structuredEvolutionUnlocks: protectedProcedure
+    .input(z.object({ homebrewId: z.number().int().positive(), evolutionElementId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      await db.assertStructuredElementForHomebrew(input.homebrewId, input.evolutionElementId);
+      return db.listEvolutionUnlocks(input.homebrewId, input.evolutionElementId);
+    }),
+  structuredEvolutionUnlocksReplace: protectedProcedure
+    .input(z.object({ homebrewId: z.number().int().positive(), evolutionElementId: z.number().int().positive(), unlockedElementIds: z.array(z.number().int().positive()).max(100) }))
+    .mutation(async ({ ctx, input }) => {
+      await assertOwner(input.homebrewId, ctx.user.id);
+      await db.assertStructuredElementForHomebrew(input.homebrewId, input.evolutionElementId);
+      for (const unlockedElementId of input.unlockedElementIds) await db.assertStructuredElementForHomebrew(input.homebrewId, unlockedElementId);
+      return db.replaceEvolutionUnlocks(input.homebrewId, input.evolutionElementId, input.unlockedElementIds);
     }),
   structuredSaveExtendedMechanics: protectedProcedure
     .input(z.object({

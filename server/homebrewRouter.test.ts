@@ -23,6 +23,8 @@ vi.mock("./db", () => ({
   createWeaponTechniqueLink: vi.fn(),
   deleteWeaponTechniqueLink: vi.fn(),
   updateWeaponTechniqueLink: vi.fn(),
+  listEvolutionUnlocks: vi.fn(),
+  replaceEvolutionUnlocks: vi.fn(),
   assertStructuredElementForHomebrew: vi.fn(),
   assertWeaponTechniqueLinkForHomebrew: vi.fn(),
 }));
@@ -121,6 +123,18 @@ describe("fluxos de dados da biblioteca de Homebrews", () => {
     expect(db.createWeaponTechniqueLink).toHaveBeenCalledWith({ homebrewId: 7, weaponElementId: 11, techniqueElementId: 12 });
     expect(db.deleteWeaponTechniqueLink).toHaveBeenCalledWith(7, 21);
     expect(db.updateWeaponTechniqueLink).toHaveBeenCalledWith({ homebrewId: 7, id: 21, weaponElementId: 13, techniqueElementId: 14 });
+  });
+
+  it("mantém os itens liberados por Evolução sob autorização do proprietário", async () => {
+    const unlocks = [{ id: 31, evolutionElementId: 11, unlockedElementId: 12 }];
+    vi.mocked(db.listEvolutionUnlocks).mockResolvedValue(unlocks as never);
+    vi.mocked(db.replaceEvolutionUnlocks).mockResolvedValue(unlocks as never);
+    const caller = appRouter.createCaller(createContext());
+    await expect(caller.homebrew.structuredEvolutionUnlocks({ homebrewId: 7, evolutionElementId: 11 })).resolves.toEqual(unlocks);
+    await caller.homebrew.structuredEvolutionUnlocksReplace({ homebrewId: 7, evolutionElementId: 11, unlockedElementIds: [12, 13] });
+    expect(db.listEvolutionUnlocks).toHaveBeenCalledWith(7, 11);
+    expect(db.replaceEvolutionUnlocks).toHaveBeenCalledWith(7, 11, [12, 13]);
+    expect(db.assertStructuredElementForHomebrew).toHaveBeenCalledWith(7, 13);
   });
 
   it("remove imagem vinculada de elemento do proprietário", async () => {

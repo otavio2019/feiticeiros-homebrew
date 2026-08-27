@@ -90,6 +90,7 @@ export const homebrewElementType = mysqlEnum("homebrewElementType", [
   "caracteristica",
   "talento",
   "evolucao",
+  "penalidade",
   "propriedade",
 ]);
 export const imageSource = mysqlEnum("imageSource", ["url", "upload"]);
@@ -321,6 +322,19 @@ export const structuredEvolutions = mysqlTable(
     ruleSource: structuredRuleSource.notNull().default("homebrew"),
   },
   table => [index("evolutions_element_position_idx").on(table.elementId, table.position)],
+);
+
+export const structuredEvolutionUnlocks = mysqlTable(
+  "structuredEvolutionUnlocks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    evolutionElementId: int("evolutionElementId").notNull().references(() => homebrewStructuredElements.id),
+    unlockedElementId: int("unlockedElementId").notNull().references(() => homebrewStructuredElements.id),
+  },
+  table => [
+    uniqueIndex("evolution_unlock_unique").on(table.evolutionElementId, table.unlockedElementId),
+    index("evolution_unlock_evolution_idx").on(table.evolutionElementId),
+  ],
 );
 
 export const structuredWeaponTechniqueLinks = mysqlTable(

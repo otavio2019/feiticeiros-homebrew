@@ -12,6 +12,25 @@ export const HOME_BREW_MODULES = [
 
 export type HomebrewModuleType = (typeof HOME_BREW_MODULES)[number];
 
+export const STRUCTURED_DAMAGE_TYPES = [
+  { value: "cortante", label: "Cortante" },
+  { value: "perfurante", label: "Perfurante" },
+  { value: "impacto", label: "Impacto" },
+  { value: "acido", label: "Ácido" },
+  { value: "congelante", label: "Congelante" },
+  { value: "chocante", label: "Chocante" },
+  { value: "queimante", label: "Queimante" },
+  { value: "sonico", label: "Sônico" },
+  { value: "alma", label: "na Alma" },
+  { value: "energia-reversa", label: "Energia Reversa" },
+  { value: "energetico", label: "Energético" },
+  { value: "psiquico", label: "Psíquico" },
+  { value: "radiante", label: "Radiante" },
+  { value: "necrotico", label: "Necrótico" },
+  { value: "venenoso", label: "Venenoso" },
+] as const;
+export const STRUCTURED_DAMAGE_TYPE_VALUES = STRUCTURED_DAMAGE_TYPES.map(item => item.value);
+
 export const HOME_BREW_MODULE_LABELS: Record<HomebrewModuleType, string> = {
   origem: "Origem",
   votos: "Votos & Restrições",
@@ -136,26 +155,6 @@ export function buildHomebrewValidation(
     { key: "narrative", label: `Descrição de ${HOME_BREW_MODULE_LABELS[module]}`, valid: narrative.length >= 12, message: "Descreva o funcionamento deste módulo." },
     { key: "manual", label: "Nota personalizada", valid: !manualMode || manualNotes.length >= 12, message: "Explique a exceção criada no modo manual." },
   ];
-
-  if (module === "tecnicas") {
-    const level = Number(data.techniqueLevel);
-    const cost = Number(data.techniqueCost);
-    base.push(
-      { key: "technique-type", label: "Tipo de feitiço", valid: Boolean(String(data.techniqueType ?? "").trim()), message: "Escolha o tipo do feitiço." },
-      { key: "technique-level", label: "Nível do feitiço", valid: Number.isInteger(level) && level >= 0 && level <= 5, message: "Informe um nível de feitiço entre 0 e 5." },
-      { key: "technique-cost", label: "Custo em energia", valid: isTechniqueCostAllowed(level, cost, manualMode), message: "O custo diverge do padrão do nível escolhido." },
-    );
-  }
-
-  if (module === "votos") {
-    const duration = data.vowDuration as VowDuration;
-    const weight = data.vowWeight as VowWeight;
-    base.push(
-      { key: "vow-duration", label: "Duração do voto", valid: duration === "temporario" || duration === "permanente", message: "Escolha uma duração para o voto." },
-      { key: "vow-weight", label: "Peso do voto", valid: ["leve", "medio", "pesado", "extremo"].includes(weight) && isVowCombinationAllowed(duration, weight), message: "Revise a combinação entre duração e peso." },
-      { key: "vow-trade", label: "Contrapartida", valid: String(data.vowTrade ?? "").trim().length >= 12, message: "Descreva benefício e malefício do voto." },
-    );
-  }
 
   if (module === "shikigami") {
     const sheet = isRecord(data.shikigami) ? data.shikigami : {};

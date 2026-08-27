@@ -9,11 +9,17 @@ import {
   calculateTechniqueDifficulty,
   isVowCombinationAllowed,
   SPELL_COST_BY_LEVEL,
+  STRUCTURED_DAMAGE_TYPES,
   validateStructuredMechanics,
   validateStructuredExtendedMechanics,
 } from "../shared/homebrewRules";
 
 describe("regras estruturadas de Homebrew", () => {
+  it("mantém os quinze tipos de dano oficiais como opções estruturadas", () => {
+    expect(STRUCTURED_DAMAGE_TYPES).toHaveLength(15);
+    expect(STRUCTURED_DAMAGE_TYPES.map(item => item.value)).toEqual(["cortante", "perfurante", "impacto", "acido", "congelante", "chocante", "queimante", "sonico", "alma", "energia-reversa", "energetico", "psiquico", "radiante", "necrotico", "venenoso"]);
+  });
+
   it("calcula modificadores e CD da técnica", () => {
     expect(calculateAttributeModifier(8)).toBe(-1);
     expect(calculateAttributeModifier(17)).toBe(3);
@@ -61,7 +67,7 @@ describe("regras estruturadas de Homebrew", () => {
 
   it("gera pendências contextuais para os campos essenciais do construtor", () => {
     const pending = buildHomebrewValidation("A", "", "tecnicas", true, {});
-    expect(pending.filter(item => !item.valid)).toHaveLength(6);
+    expect(pending.filter(item => !item.valid)).toHaveLength(4);
 
     const complete = buildHomebrewValidation("Técnica da Aurora", "Resumo da técnica", "tecnicas", true, {
       tecnicasNarrative: "Uma descrição suficientemente detalhada da técnica.",
@@ -86,14 +92,14 @@ describe("regras estruturadas de Homebrew", () => {
     expect(validateStructuredExtendedMechanics({ costs: [{ resource: "", amount: -1, details: "" }] }, true).valid).toBe(true);
   });
 
-  it("valida campos específicos de técnica e voto", () => {
+  it("não depende de campos legados de técnica e voto", () => {
     const technique = buildHomebrewValidation("Técnica", "Resumo", "tecnicas", false, {
       tecnicasNarrative: "Descrição suficiente do funcionamento da técnica.",
       techniqueType: "dano",
       techniqueLevel: 2,
       techniqueCost: 8,
     });
-    expect(technique.find(item => item.key === "technique-cost")?.valid).toBe(false);
+    expect(technique.some(item => item.key.startsWith("technique-"))).toBe(false);
 
     const vow = buildHomebrewValidation("Voto", "Resumo", "votos", false, {
       votosNarrative: "Descrição suficiente da intenção do voto.",
@@ -101,7 +107,7 @@ describe("regras estruturadas de Homebrew", () => {
       vowWeight: "extremo",
       vowTrade: "Recebo uma vantagem em troca de uma limitação detalhada.",
     });
-    expect(vow.find(item => item.key === "vow-weight")?.valid).toBe(false);
+    expect(vow.some(item => item.key.startsWith("vow-"))).toBe(false);
 
     const shikigami = buildHomebrewValidation("Shikigami", "Resumo", "shikigami", false, {
       shikigamiNarrative: "Invocação de suporte com atributos e habilidades estruturadas.",

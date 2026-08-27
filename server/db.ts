@@ -22,6 +22,7 @@ import {
   structuredConditions,
   structuredVowExchanges,
   structuredEvolutions,
+  structuredEvolutionUnlocks,
   structuredWeaponTechniqueLinks,
 } from "../drizzle/schema";
 import { validateStructuredExtendedMechanics, validateStructuredMechanics, type HomebrewModuleType } from "../shared/homebrewRules";
@@ -346,6 +347,14 @@ async function duplicateStructuredEntities(database: Database, sourceHomebrewId:
     const techniqueElementId = structuredElementMap.get(link.techniqueElementId);
     if (weaponElementId && techniqueElementId) await database.insert(structuredWeaponTechniqueLinks).values({ homebrewId: clonedHomebrewId, weaponElementId, techniqueElementId });
   }
+  const evolutionUnlocks = await database.select().from(structuredEvolutionUnlocks)
+    .innerJoin(homebrewStructuredElements, eq(structuredEvolutionUnlocks.evolutionElementId, homebrewStructuredElements.id))
+    .where(eq(homebrewStructuredElements.homebrewId, sourceHomebrewId));
+  for (const row of evolutionUnlocks) {
+    const evolutionElementId = structuredElementMap.get(row.structuredEvolutionUnlocks.evolutionElementId);
+    const unlockedElementId = structuredElementMap.get(row.structuredEvolutionUnlocks.unlockedElementId);
+    if (evolutionElementId && unlockedElementId) await database.insert(structuredEvolutionUnlocks).values({ evolutionElementId, unlockedElementId });
+  }
   return structuredElementMap;
 }
 
@@ -570,6 +579,7 @@ export async function deleteStructuredElement(id: number) {
     await tx.delete(structuredConditions).where(eq(structuredConditions.elementId, elementId));
     await tx.delete(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, elementId));
     await tx.delete(structuredEvolutions).where(eq(structuredEvolutions.elementId, elementId));
+    await tx.delete(structuredEvolutionUnlocks).where(or(eq(structuredEvolutionUnlocks.evolutionElementId, elementId), eq(structuredEvolutionUnlocks.unlockedElementId, elementId)));
     await tx.delete(homebrewStructuredElements).where(eq(homebrewStructuredElements.id, elementId));
   };
   await database.transaction(async tx => {
@@ -645,6 +655,31 @@ export async function updateWeaponTechniqueLink(input: { homebrewId: number; id:
   return input;
 }
 
+export async function listEvolutionUnlocks(homebrewId: number, evolutionElementId: number) {
+  const database = await getDb();
+  if (!database) return [];
+  const evolution = await assertStructuredElementForHomebrew(homebrewId, evolutionElementId);
+  if (evolution.type !== "evolucao") throw new Error("O elemento informado não é uma Evolução.");
+  return database.select().from(structuredEvolutionUnlocks).where(eq(structuredEvolutionUnlocks.evolutionElementId, evolutionElementId));
+}
+
+export async function replaceEvolutionUnlocks(homebrewId: number, evolutionElementId: number, unlockedElementIds: number[]) {
+  const database = await getDb();
+  if (!database) throw new Error("Banco de dados indisponível.");
+  const evolution = await assertStructuredElementForHomebrew(homebrewId, evolutionElementId);
+  if (evolution.type !== "evolucao") throw new Error("O elemento informado não é uma Evolução.");
+  const uniqueIds = Array.from(new Set(unlockedElementIds));
+  for (const unlockedElementId of uniqueIds) {
+    const target = await assertStructuredElementForHomebrew(homebrewId, unlockedElementId);
+    if (target.parentElementId !== evolution.parentElementId || !["caracteristica", "talento"].includes(target.type)) throw new Error("Uma Evolução só pode liberar Características ou Talentos da mesma Origem.");
+  }
+  await database.transaction(async tx => {
+    await tx.delete(structuredEvolutionUnlocks).where(eq(structuredEvolutionUnlocks.evolutionElementId, evolutionElementId));
+    if (uniqueIds.length) await tx.insert(structuredEvolutionUnlocks).values(uniqueIds.map(unlockedElementId => ({ evolutionElementId, unlockedElementId })));
+  });
+  return listEvolutionUnlocks(homebrewId, evolutionElementId);
+}
+
 
 export async function listStructuredElementsForShare(homebrewId: number) {
   const database = await getDb();
@@ -653,7 +688,7 @@ export async function listStructuredElementsForShare(homebrewId: number) {
     .where(eq(homebrewStructuredElements.homebrewId, homebrewId))
     .orderBy(homebrewStructuredElements.position);
   return Promise.all(elements.map(async element => {
-    const [attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions, images] = await Promise.all([
+    const [attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions, evolutionUnlocks, images] = await Promise.all([
       database.select().from(structuredAttributeBonuses).where(eq(structuredAttributeBonuses.elementId, element.id)),
       database.select().from(structuredRequirements).where(eq(structuredRequirements.elementId, element.id)).orderBy(structuredRequirements.position),
       database.select().from(structuredEffects).where(eq(structuredEffects.elementId, element.id)).orderBy(structuredEffects.position),
@@ -663,9 +698,10 @@ export async function listStructuredElementsForShare(homebrewId: number) {
       database.select().from(structuredConditions).where(eq(structuredConditions.elementId, element.id)).orderBy(structuredConditions.position),
       database.select().from(structuredVowExchanges).where(eq(structuredVowExchanges.elementId, element.id)).orderBy(structuredVowExchanges.position),
       database.select().from(structuredEvolutions).where(eq(structuredEvolutions.elementId, element.id)).orderBy(structuredEvolutions.position),
+      database.select().from(structuredEvolutionUnlocks).where(eq(structuredEvolutionUnlocks.evolutionElementId, element.id)),
       database.select().from(homebrewImages).where(and(eq(homebrewImages.homebrewId, homebrewId), eq(homebrewImages.elementId, element.id))),
     ]);
-    return { ...element, images, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions } };
+    return { ...element, images, mechanics: { attributeBonuses, requirements, effects, costs, damageProfiles, ranges, conditions, vowExchanges, evolutions, evolutionUnlocks } };
   }));
 }
 
