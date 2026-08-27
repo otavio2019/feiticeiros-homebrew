@@ -106,14 +106,19 @@
 - [x] Repetir um teste autenticado específico do Cloudinary após a rotação final, com upload e leitura HTTPS confirmados pelo smoke test final sem expor a credencial.
 - [ ] Anexar evidência verificável do desligamento Railway por tela, exportação do provedor ou resposta técnica equivalente.
 
-- [ ] Corrigir a falha de consulta de autenticação em produção para usuários existentes no TiDB e validar login local.
+- [x] Corrigir a falha de consulta de autenticação em produção para usuários existentes no TiDB e validar login local.
 - [x] Sincronizar o `pnpm-lock.yaml` com as dependências de testes para desbloquear o build CI/CD da Vercel.
-- [ ] Republicar a correção e repetir a validação autenticada no ambiente final.
+- [x] Republicar a correção e repetir a validação autenticada no ambiente final.
 
-- [ ] Diagnosticar e corrigir a sessão que não permanece após login na produção Vercel, incluindo cookie HTTPS, domínio e leitura no endpoint `auth.me`.
-- [ ] Validar login persistido e logout no navegador de produção após a correção.
+- [x] Diagnosticar e corrigir a sessão que não permanece após login na produção Vercel, incluindo cookie HTTPS, domínio e leitura no endpoint `auth.me`.
+- [ ] Validar login persistido e logout no navegador de produção após a correção; login e `auth.me` foram confirmados, mas falta evidência de logout.
 
 - [x] Auditar o schema completo do TiDB `homebrew_forge` contra Drizzle, aplicar a sequência integral de migrations apenas se houver divergência e validar `SELECT id, email FROM users LIMIT 1`.
 
-- [ ] Confirmar e alinhar o DSN do banco de produção Vercel com o cluster TiDB que contém a tabela `users` e as migrations aplicadas; a consulta mínima `id,email` ainda falha.
-- [ ] Registrar e revisar no runtime Vercel o código e a mensagem segura do driver MySQL por trás da falha de `auth.login`, sem registrar e-mail, query completa ou credenciais.
+- [x] Confirmar e alinhar o DSN do banco de produção Vercel com o cluster TiDB que contém a tabela `users` e as migrations aplicadas; a consulta mínima `id,email` ainda falha.
+- [ ] Republicar a telemetria sanitizada da Function Vercel e confirmar no runtime que erros de banco não registram usuário, IP, e-mail, query completa ou URL de conexão.
+
+- [x] Corrigir a credencial de `TIDB_DATABASE_URL` na Vercel: o log confirmou `ER_ACCESS_DENIED_ERROR` (1045/28000), não divergência de schema.
+
+- [ ] Corrigir os erros de produção pendentes, priorizando a credencial TiDB, login e persistência de sessão antes de qualquer evolução funcional.
+- [ ] Publicar e confirmar na Vercel que o cadastro com e-mail já existente retorna conflito compreensível, em vez de HTTP 500.

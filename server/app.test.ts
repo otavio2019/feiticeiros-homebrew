@@ -35,7 +35,7 @@ describe("getDatabaseErrorSummary", () => {
         code: "ER_NO_SUCH_TABLE",
         errno: 1146,
         sqlState: "42S02",
-        sqlMessage: "Table 'homebrew_forge.users' doesn't exist for otavio@example.com via mysql://user:secret@host/db",
+        sqlMessage: "Access denied for user 'db-user'@'10.0.0.1' with otavio@example.com via mysql://user:secret@host/db",
       },
     };
 
@@ -43,7 +43,7 @@ describe("getDatabaseErrorSummary", () => {
       driverCode: "ER_NO_SUCH_TABLE",
       driverErrno: 1146,
       driverSqlState: "42S02",
-      driverMessage: "Table 'homebrew_forge.users' doesn't exist for [email-redacted] via [connection-url-redacted]",
+      driverMessage: "Access denied for database user [redacted] with [email-redacted] via [connection-url-redacted]",
     });
   });
 });

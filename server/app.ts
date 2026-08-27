@@ -26,6 +26,7 @@ function sanitizeDriverMessage(value: unknown) {
   return value
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email-redacted]")
     .replace(/\b(?:mysql|postgres(?:ql)?):\/\/[^\s]+/gi, "[connection-url-redacted]")
+    .replace(/Access denied for user '[^']+'@'[^']+'/gi, "Access denied for database user [redacted]")
     .slice(0, 500);
 }
 

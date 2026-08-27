@@ -1323,7 +1323,9 @@ var appRouter = router({
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     register: publicProcedure.input(credentialsSchema.extend({ name: z3.string().trim().min(1).max(120).optional() })).mutation(async ({ input, ctx }) => {
-      if (await getUserByEmail(input.email)) throw new Error("Este e-mail j\xE1 est\xE1 cadastrado.");
+      if (await getUserByEmail(input.email)) {
+        throw new TRPCError3({ code: "CONFLICT", message: "Este e-mail j\xE1 est\xE1 cadastrado. Entre com sua senha ou use a recupera\xE7\xE3o de senha." });
+      }
       const user = await createLocalUser({
         email: input.email,
         name: input.name ?? null,
@@ -1398,7 +1400,7 @@ function findDriverError(error, depth = 0) {
 }
 function sanitizeDriverMessage(value) {
   if (typeof value !== "string") return void 0;
-  return value.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email-redacted]").replace(/\b(?:mysql|postgres(?:ql)?):\/\/[^\s]+/gi, "[connection-url-redacted]").slice(0, 500);
+  return value.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email-redacted]").replace(/\b(?:mysql|postgres(?:ql)?):\/\/[^\s]+/gi, "[connection-url-redacted]").replace(/Access denied for user '[^']+'@'[^']+'/gi, "Access denied for database user [redacted]").slice(0, 500);
 }
 function getDatabaseErrorSummary(error) {
   const driverError = findDriverError(error);

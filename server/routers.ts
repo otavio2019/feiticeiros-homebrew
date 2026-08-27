@@ -28,7 +28,9 @@ export const appRouter = router({
     register: publicProcedure
       .input(credentialsSchema.extend({ name: z.string().trim().min(1).max(120).optional() }))
       .mutation(async ({ input, ctx }) => {
-        if (await db.getUserByEmail(input.email)) throw new Error("Este e-mail já está cadastrado.");
+        if (await db.getUserByEmail(input.email)) {
+          throw new TRPCError({ code: "CONFLICT", message: "Este e-mail já está cadastrado. Entre com sua senha ou use a recuperação de senha." });
+        }
         const user = await db.createLocalUser({
           email: input.email,
           name: input.name ?? null,

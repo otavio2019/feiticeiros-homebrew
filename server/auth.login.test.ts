@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbMock = vi.hoisted(() => ({
   getUserByEmail: vi.fn(),
+  createLocalUser: vi.fn(),
 }));
 const sdkMock = vi.hoisted(() => ({
   createSession: vi.fn(),
@@ -65,5 +66,24 @@ describe("auth.login", () => {
     expect(sdkMock.createSession).toHaveBeenCalledWith(baseUser.id);
     expect(cookies).toHaveLength(1);
     expect(cookies[0]).toMatchObject({ name: "app_session_id", value: "session-token", options: { httpOnly: true, secure: true, sameSite: "lax", path: "/" } });
+  });
+});
+
+describe("auth.register", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("retorna conflito compreensível quando o e-mail já existe", async () => {
+    dbMock.getUserByEmail.mockResolvedValue(baseUser);
+    const { ctx } = createContext();
+
+    await expect(
+      appRouter.createCaller(ctx).auth.register({ email: baseUser.email, password: "senha-segura-123", name: "Otávio" }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "Este e-mail já está cadastrado. Entre com sua senha ou use a recuperação de senha.",
+    });
+    expect(dbMock.createLocalUser).not.toHaveBeenCalled();
   });
 });
