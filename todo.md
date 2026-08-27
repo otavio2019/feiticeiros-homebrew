@@ -147,4 +147,4 @@
 - [x] Fazer o custo do Shikigami variar pela quantidade de ações e características preenchidas, e expor os modificadores opostos de tamanho presentes na planilha Google.
 - [x] Sincronizar os valores padrão exibidos do Shikigami com a validação contextual para eliminar falsos erros de grau e orçamento de atributos.
 - [x] Cobrir o estado inicial do módulo Shikigami, garantindo que os valores padrão exibidos não produzam pendências falsas.
-- [ ] Revalidar em produção a ficha de Shikigami após corrigir a inconsistência de valores padrão.
+- [x] Revalidar em produção a ficha de Shikigami após corrigir a inconsistência de valores padrão.
