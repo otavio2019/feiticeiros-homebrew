@@ -21,9 +21,14 @@ import {
   structuredRanges,
   structuredConditions,
   structuredVowExchanges,
-  structuredEvolutions,
-  structuredEvolutionUnlocks,
-  structuredWeaponTechniqueLinks,
+    structuredEvolutions,
+    structuredEvolutionUnlocks,
+    structuredWeaponTechniqueLinks,
+    shikigamiAbilities,
+    shikigamiAttributes,
+    shikigamiOptions,
+    shikigamiSheets,
+    shikigamiSkills,
 } from "../drizzle/schema";
 import { validateStructuredExtendedMechanics, validateStructuredMechanics, type HomebrewModuleType } from "../shared/homebrewRules";
 import { ENV } from "./_core/env";
@@ -33,6 +38,141 @@ let _pool: Pool | null = null;
 type Database = ReturnType<typeof drizzle<Record<string, never>, Pool>>;
 let _db: Database | null = null;
 type StructuredElementType = StructuredElement["type"];
+const SHIKIGAMI_ATTRIBUTES = ["forca", "destreza", "constituicao", "inteligencia", "sabedoria", "carisma"] as const;
+const SHIKIGAMI_SKILLS = ["feiticaria", "investigacao", "historia", "medicina", "religiao", "ocultismo", "prestidigitacao", "percepcao", "intuicao", "furtividade", "oficio", "reflexos", "fortitude", "vontade", "astucia", "integridade"] as const;
+const CONTROLLER_OPTION_CODES = ["concentrarPoder", "fantocheSupremo", "invocacoesMoveis", "melhoriaResistencia", "invocacoesEconomicas", "melhoriaMobilidade", "invocacoesResistentes", "melhoriaPrecisao"] as const;
+const TRAIT_OPTION_CODES = ["movimentoAlternativo", "defesaAlternativa", "bonusPericiaA", "tamanho", "defensor", "bonusPericiaB", "bonusPericiaC", "robustez", "movel", "perito"] as const;
+const SHIKIGAMI_TYPES = ["comum", "tecnica", "manipulacao"] as const;
+const SHIKIGAMI_GRADES = ["quarto", "terceiro", "segundo", "primeiro", "especial"] as const;
+const SHIKIGAMI_SIZES = ["minusculo", "pequeno", "medio", "grande", "enorme", "colossal"] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function enumValue<T extends readonly string[]>(value: unknown, values: T, fallback: T[number]): T[number] {
+  return typeof value === "string" && (values as readonly string[]).includes(value) ? value as T[number] : fallback;
+}
+
+function safeInteger(value: unknown, fallback: number, minimum?: number) {
+  const parsed = typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : fallback;
+  const bounded = Math.max(-2_000_000_000, Math.min(2_000_000_000, parsed));
+  return minimum === undefined ? bounded : Math.max(minimum, bounded);
+}
+
+function textValue(value: unknown, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
+
+export function normalizeShikigamiDraft(rawSheet: unknown) {
+  if (!isRecord(rawSheet)) return undefined;
+  const type = enumValue(rawSheet.type, SHIKIGAMI_TYPES, "comum");
+  const attributeBase = type === "tecnica" ? 10 : 8;
+  const attributes = isRecord(rawSheet.attributes) ? rawSheet.attributes : {};
+  const skills = isRecord(rawSheet.skills) ? rawSheet.skills : {};
+  const controllerOptions = isRecord(rawSheet.controllerOptions) ? rawSheet.controllerOptions : {};
+  const traits = isRecord(rawSheet.traits) ? rawSheet.traits : {};
+  const abilities = Array.isArray(rawSheet.abilities) ? rawSheet.abilities.filter(isRecord) : [];
+  return {
+    sheet: {
+      name: textValue(rawSheet.name).slice(0, 160),
+      type,
+      grade: enumValue(rawSheet.grade, SHIKIGAMI_GRADES, "quarto"),
+      userLevel: safeInteger(rawSheet.userLevel, 1, 1),
+      mastery: safeInteger(rawSheet.mastery ?? rawSheet.proficiencyBonus, 2, 0),
+      lostHealth: safeInteger(rawSheet.lostHealth, 0, 0),
+      healedHealth: safeInteger(rawSheet.healedHealth, 0, 0),
+      movementAttribute: enumValue(rawSheet.movementAttribute, SHIKIGAMI_ATTRIBUTES, "destreza"),
+      defenseAttribute: enumValue(rawSheet.defenseAttribute, SHIKIGAMI_ATTRIBUTES, "destreza"),
+      bonusSkillA: enumValue(rawSheet.bonusSkillA ?? rawSheet.bonusSkill, SHIKIGAMI_SKILLS, "feiticaria"),
+      bonusSkillB: enumValue(rawSheet.bonusSkillB, SHIKIGAMI_SKILLS, "investigacao"),
+      bonusSkillC: enumValue(rawSheet.bonusSkillC, SHIKIGAMI_SKILLS, "historia"),
+      size: enumValue(rawSheet.size, SHIKIGAMI_SIZES, "medio"),
+      notes: textValue(rawSheet.notes),
+    },
+    attributes: SHIKIGAMI_ATTRIBUTES.map(attribute => ({ attribute, value: safeInteger(attributes[attribute], attributeBase, attributeBase) })),
+    skills: SHIKIGAMI_SKILLS.map(skill => {
+      const state = isRecord(skills[skill]) ? skills[skill] : {};
+      return { skill, otherBonus: safeInteger(state.otherBonus ?? state.manualBonus, 0), mastery: Boolean(state.mastery ?? state.trained), specialty: Boolean(state.specialty) };
+    }),
+    options: [
+      ...CONTROLLER_OPTION_CODES.map(code => ({ group: "controlador" as const, code, enabled: Boolean(controllerOptions[code]) })),
+      ...TRAIT_OPTION_CODES.map(code => ({ group: "caracteristica" as const, code, enabled: Boolean(traits[code]) })),
+    ],
+    abilities: abilities.map((ability, position) => ({
+      clientId: textValue(ability.id, crypto.randomUUID()).slice(0, 64),
+      kind: enumValue(ability.kind, ["acao", "caracteristica"] as const, "acao"),
+      name: textValue(ability.name).slice(0, 160),
+      description: textValue(ability.description),
+      position,
+    })),
+  };
+}
+
+async function getNormalizedShikigamiData(database: Database, homebrewId: number) {
+  const [sheet] = await database.select().from(shikigamiSheets).where(eq(shikigamiSheets.homebrewId, homebrewId)).limit(1);
+  if (!sheet) return undefined;
+  const [attributes, skills, options, abilities] = await Promise.all([
+    database.select().from(shikigamiAttributes).where(eq(shikigamiAttributes.sheetId, sheet.id)),
+    database.select().from(shikigamiSkills).where(eq(shikigamiSkills.sheetId, sheet.id)),
+    database.select().from(shikigamiOptions).where(eq(shikigamiOptions.sheetId, sheet.id)),
+    database.select().from(shikigamiAbilities).where(eq(shikigamiAbilities.sheetId, sheet.id)).orderBy(shikigamiAbilities.position),
+  ]);
+  const attributesByKey = Object.fromEntries(attributes.map(item => [item.attribute, item.value]));
+  const skillsByKey = Object.fromEntries(skills.map(item => [item.skill, { otherBonus: item.otherBonus, mastery: item.mastery, specialty: item.specialty }]));
+  const controllerOptions = Object.fromEntries(options.filter(item => item.group === "controlador").map(item => [item.code, item.enabled]));
+  const traits = Object.fromEntries(options.filter(item => item.group === "caracteristica").map(item => [item.code, item.enabled]));
+  return {
+    shikigami: {
+      name: sheet.name,
+      type: sheet.type,
+      grade: sheet.grade,
+      userLevel: sheet.userLevel,
+      mastery: sheet.mastery,
+      attributes: attributesByKey,
+      skills: skillsByKey,
+      lostHealth: sheet.lostHealth,
+      healedHealth: sheet.healedHealth,
+      notes: sheet.notes,
+      controllerOptions,
+      traits,
+      movementAttribute: sheet.movementAttribute,
+      defenseAttribute: sheet.defenseAttribute,
+      bonusSkillA: sheet.bonusSkillA,
+      bonusSkillB: sheet.bonusSkillB,
+      bonusSkillC: sheet.bonusSkillC,
+      size: sheet.size,
+      abilities: abilities.map(item => ({ id: item.clientId, kind: item.kind, name: item.name, description: item.description })),
+    },
+  } as Record<string, unknown>;
+}
+
+async function synchronizeShikigamiData(database: Database, homebrewId: number, data: Record<string, unknown>) {
+  const normalized = normalizeShikigamiDraft(data.shikigami);
+  if (!normalized) return;
+  const [module] = await database.select({ id: homebrewModules.id }).from(homebrewModules)
+    .where(and(eq(homebrewModules.homebrewId, homebrewId), eq(homebrewModules.type, "shikigami"))).limit(1);
+  if (!module) return;
+  const sheetValues = { moduleId: module.id, ...normalized.sheet };
+  const [existing] = await database.select({ id: shikigamiSheets.id }).from(shikigamiSheets).where(eq(shikigamiSheets.homebrewId, homebrewId)).limit(1);
+  let sheetId = existing?.id;
+  if (sheetId) await database.update(shikigamiSheets).set(sheetValues).where(eq(shikigamiSheets.id, sheetId));
+  else {
+    const result = await database.insert(shikigamiSheets).values({ homebrewId, ...sheetValues });
+    sheetId = Number((result as unknown as [{ insertId: number }])[0].insertId);
+  }
+
+  await Promise.all([
+    database.delete(shikigamiAttributes).where(eq(shikigamiAttributes.sheetId, sheetId)),
+    database.delete(shikigamiSkills).where(eq(shikigamiSkills.sheetId, sheetId)),
+    database.delete(shikigamiOptions).where(eq(shikigamiOptions.sheetId, sheetId)),
+    database.delete(shikigamiAbilities).where(eq(shikigamiAbilities.sheetId, sheetId)),
+  ]);
+  await database.insert(shikigamiAttributes).values(normalized.attributes.map(item => ({ sheetId, ...item })));
+  await database.insert(shikigamiSkills).values(normalized.skills.map(item => ({ sheetId, ...item })));
+  await database.insert(shikigamiOptions).values(normalized.options.map(item => ({ sheetId, ...item })));
+  if (normalized.abilities.length) await database.insert(shikigamiAbilities).values(normalized.abilities.map(item => ({ sheetId, ...item })));
+}
 
 export async function getDb() {
   const databaseUrl = getDatabaseUrl();
@@ -219,12 +359,13 @@ export async function getHomebrewDetail(id: number) {
   if (!database) return undefined;
   const homebrew = await getHomebrewById(id);
   if (!homebrew) return undefined;
-  const [modules, elements, images] = await Promise.all([
+  const [modules, elements, images, normalizedShikigami] = await Promise.all([
     database.select().from(homebrewModules).where(eq(homebrewModules.homebrewId, id)).orderBy(homebrewModules.position),
     database.select().from(homebrewElements).where(eq(homebrewElements.homebrewId, id)).orderBy(homebrewElements.position),
     database.select().from(homebrewImages).where(eq(homebrewImages.homebrewId, id)),
+    getNormalizedShikigamiData(database, id),
   ]);
-  return { ...homebrew, modules, elements, images };
+  return { ...homebrew, data: { ...homebrew.data, ...normalizedShikigami }, modules, elements, images };
 }
 
 export async function createHomebrew(input: {
@@ -263,13 +404,24 @@ export async function updateHomebrew(id: number, changes: {
 }) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indisponível.");
-  await database.update(homebrews).set(changes).where(eq(homebrews.id, id));
+  await database.transaction(async transaction => {
+    await transaction.update(homebrews).set(changes).where(eq(homebrews.id, id));
+    if (changes.data) await synchronizeShikigamiData(transaction as unknown as Database, id, changes.data);
+  });
   return getHomebrewDetail(id);
 }
 
 export async function deleteHomebrew(id: number) {
   const database = await getDb();
   if (!database) throw new Error("Banco de dados indisponível.");
+  const sheets = await database.select({ id: shikigamiSheets.id }).from(shikigamiSheets).where(eq(shikigamiSheets.homebrewId, id));
+  for (const sheet of sheets) {
+    await database.delete(shikigamiAttributes).where(eq(shikigamiAttributes.sheetId, sheet.id));
+    await database.delete(shikigamiSkills).where(eq(shikigamiSkills.sheetId, sheet.id));
+    await database.delete(shikigamiOptions).where(eq(shikigamiOptions.sheetId, sheet.id));
+    await database.delete(shikigamiAbilities).where(eq(shikigamiAbilities.sheetId, sheet.id));
+  }
+  await database.delete(shikigamiSheets).where(eq(shikigamiSheets.homebrewId, id));
   const structuredIds = await database.select({ id: homebrewStructuredElements.id }).from(homebrewStructuredElements).where(eq(homebrewStructuredElements.homebrewId, id));
   for (const row of structuredIds) {
     await database.delete(structuredWeaponTechniqueLinks).where(or(eq(structuredWeaponTechniqueLinks.weaponElementId, row.id), eq(structuredWeaponTechniqueLinks.techniqueElementId, row.id)));
@@ -373,7 +525,7 @@ export async function duplicateHomebrew(source: Homebrew, ownerId: number, share
     manualMode: source.manualMode,
     characterLevel: source.characterLevel,
     coverImageUrl: source.coverImageUrl,
-    data: source.data,
+    data: detail.data,
   });
   const clonedHomebrewId = Number((clonedHomebrew as unknown as [{ insertId: number }])[0].insertId);
   const moduleMap = new Map<number, number>();
@@ -413,6 +565,7 @@ export async function duplicateHomebrew(source: Homebrew, ownerId: number, share
   }
 
   const structuredElementMap = await duplicateStructuredEntities(database, source.id, clonedHomebrewId, moduleMap, elementMap);
+  await synchronizeShikigamiData(database, clonedHomebrewId, detail.data);
   if (detail.images.length) {
     await database.insert(homebrewImages).values(detail.images.map(image => ({
       homebrewId: clonedHomebrewId,

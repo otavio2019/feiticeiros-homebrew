@@ -148,3 +148,9 @@
 - [x] Sincronizar os valores padrão exibidos do Shikigami com a validação contextual para eliminar falsos erros de grau e orçamento de atributos.
 - [x] Cobrir o estado inicial do módulo Shikigami, garantindo que os valores padrão exibidos não produzam pendências falsas.
 - [x] Revalidar em produção a ficha de Shikigami após corrigir a inconsistência de valores padrão.
+- [x] Auditar e normalizar a persistência dos dados mecânicos de Shikigami que ainda vivem somente no JSON da Homebrew, sem duplicar fórmulas ou inventar regras.
+- [ ] Auditar ponto a ponto as divergências restantes entre a planilha Google de Shikigami e o criador publicado, especialmente a lógica de custo por ações/características e quaisquer aproximações estruturais ainda usadas.
+- [ ] Adicionar testes e evidências documentais para cada divergência conhecida entre a planilha Google e o PDF, confirmando que a implementação publicada segue a fonte prioritária.
+- [ ] Alinhar o custo de Shikigami às 20 vagas da planilha — dez ações e dez características — e implementar a terceira seleção de Bônus em Perícia presente na fonte prioritária.
+- [ ] Exibir na ficha de leitura o estado percentual e os totais de perícia calculados que a planilha de Shikigami apresenta.
+- [ ] Usar a nomenclatura literal "Grau Especial" e os rótulos completos de melhorias do controlador exibidos na planilha prioritária.

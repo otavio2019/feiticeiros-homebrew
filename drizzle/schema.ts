@@ -349,5 +349,95 @@ export const structuredWeaponTechniqueLinks = mysqlTable(
   table => [uniqueIndex("weapon_technique_link_unique").on(table.weaponElementId, table.techniqueElementId)],
 );
 
+const shikigamiTypeValues = ["comum", "tecnica", "manipulacao"] as const;
+const shikigamiGradeValues = ["quarto", "terceiro", "segundo", "primeiro", "especial"] as const;
+const shikigamiAttributeValues = ["forca", "destreza", "constituicao", "inteligencia", "sabedoria", "carisma"] as const;
+const shikigamiSkillValues = [
+  "feiticaria", "investigacao", "historia", "medicina", "religiao", "ocultismo", "prestidigitacao", "percepcao",
+  "intuicao", "furtividade", "oficio", "reflexos", "fortitude", "vontade", "astucia", "integridade",
+] as const;
+const shikigamiOptionGroupValues = ["controlador", "caracteristica"] as const;
+const shikigamiAbilityKindValues = ["acao", "caracteristica"] as const;
+const shikigamiSizeValues = ["minusculo", "pequeno", "medio", "grande", "enorme", "colossal"] as const;
+
+export const shikigamiSheets = mysqlTable(
+  "shikigamiSheets",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    homebrewId: int("homebrewId").notNull().references(() => homebrews.id),
+    moduleId: int("moduleId").notNull().references(() => homebrewModules.id),
+    name: varchar("name", { length: 160 }).notNull().default(""),
+    type: mysqlEnum("type", shikigamiTypeValues).notNull().default("comum"),
+    grade: mysqlEnum("grade", shikigamiGradeValues).notNull().default("quarto"),
+    userLevel: int("userLevel").notNull().default(1),
+    mastery: int("mastery").notNull().default(2),
+    lostHealth: int("lostHealth").notNull().default(0),
+    healedHealth: int("healedHealth").notNull().default(0),
+    movementAttribute: mysqlEnum("movementAttribute", shikigamiAttributeValues).notNull().default("destreza"),
+    defenseAttribute: mysqlEnum("defenseAttribute", shikigamiAttributeValues).notNull().default("destreza"),
+    bonusSkillA: mysqlEnum("bonusSkillA", shikigamiSkillValues).notNull().default("feiticaria"),
+    bonusSkillB: mysqlEnum("bonusSkillB", shikigamiSkillValues).notNull().default("investigacao"),
+    bonusSkillC: mysqlEnum("bonusSkillC", shikigamiSkillValues).notNull().default("historia"),
+    size: mysqlEnum("size", shikigamiSizeValues).notNull().default("medio"),
+    notes: text("notes").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("shikigami_sheets_homebrew_unique").on(table.homebrewId),
+    uniqueIndex("shikigami_sheets_module_unique").on(table.moduleId),
+  ],
+);
+
+export const shikigamiAttributes = mysqlTable(
+  "shikigamiAttributes",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sheetId: int("sheetId").notNull().references(() => shikigamiSheets.id),
+    attribute: mysqlEnum("attribute", shikigamiAttributeValues).notNull(),
+    value: int("value").notNull(),
+  },
+  table => [uniqueIndex("shikigami_attributes_sheet_attribute_unique").on(table.sheetId, table.attribute)],
+);
+
+export const shikigamiSkills = mysqlTable(
+  "shikigamiSkills",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sheetId: int("sheetId").notNull().references(() => shikigamiSheets.id),
+    skill: mysqlEnum("skill", shikigamiSkillValues).notNull(),
+    otherBonus: int("otherBonus").notNull().default(0),
+    mastery: boolean("mastery").notNull().default(false),
+    specialty: boolean("specialty").notNull().default(false),
+  },
+  table => [uniqueIndex("shikigami_skills_sheet_skill_unique").on(table.sheetId, table.skill)],
+);
+
+export const shikigamiOptions = mysqlTable(
+  "shikigamiOptions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sheetId: int("sheetId").notNull().references(() => shikigamiSheets.id),
+    group: mysqlEnum("group", shikigamiOptionGroupValues).notNull(),
+    code: varchar("code", { length: 64 }).notNull(),
+    enabled: boolean("enabled").notNull().default(false),
+  },
+  table => [uniqueIndex("shikigami_options_sheet_group_code_unique").on(table.sheetId, table.group, table.code)],
+);
+
+export const shikigamiAbilities = mysqlTable(
+  "shikigamiAbilities",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sheetId: int("sheetId").notNull().references(() => shikigamiSheets.id),
+    clientId: varchar("clientId", { length: 64 }).notNull(),
+    kind: mysqlEnum("kind", shikigamiAbilityKindValues).notNull(),
+    name: varchar("name", { length: 160 }).notNull().default(""),
+    description: text("description").notNull(),
+    position: int("position").notNull().default(0),
+  },
+  table => [index("shikigami_abilities_sheet_position_idx").on(table.sheetId, table.position)],
+);
+
 export type StructuredElement = typeof homebrewStructuredElements.$inferSelect;
 export type InsertStructuredElement = typeof homebrewStructuredElements.$inferInsert;

@@ -19,3 +19,5 @@ try {
 } finally {
   await pool.end();
 }
+
+process.exit(0);

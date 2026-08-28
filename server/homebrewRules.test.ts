@@ -66,6 +66,20 @@ describe("regras estruturadas de Homebrew", () => {
     expect(calculated.sizeResistanceModifier).toBe(-2);
   });
 
+  it("limita o custo aos vinte registros da planilha e soma as três escolhas de bônus em perícia", () => {
+    const stats = calculateShikigamiReferenceStats({
+      grade: "segundo",
+      type: "comum",
+      attributes: {},
+      userLevel: 8,
+      mastery: 2,
+      traits: { bonusPericiaA: true, bonusPericiaB: true, bonusPericiaC: true },
+      additionalEntryCount: 99,
+    });
+    expect(stats.cost).toBe(23);
+    expect(stats.skillBonus).toBe(18);
+  });
+
   it("calcula modificadores e CD da técnica", () => {
     expect(calculateAttributeModifier(8)).toBe(-1);
     expect(calculateAttributeModifier(17)).toBe(3);

@@ -91,6 +91,13 @@ export const INVOCATION_GRADE_RULES = {
 } as const;
 
 export type InvocationGrade = keyof typeof INVOCATION_GRADE_RULES;
+export const INVOCATION_GRADE_LABELS: Record<InvocationGrade, string> = {
+  quarto: "Quarto Grau",
+  terceiro: "Terceiro Grau",
+  segundo: "Segundo Grau",
+  primeiro: "Primeiro Grau",
+  especial: "Grau Especial",
+};
 export const INVOCATION_ATTRIBUTES = ["forca", "destreza", "constituicao", "inteligencia", "sabedoria", "carisma"] as const;
 export type InvocationAttribute = (typeof INVOCATION_ATTRIBUTES)[number];
 
@@ -124,7 +131,7 @@ export function isShikigamiType(value: unknown): value is ShikigamiType {
 }
 
 export type ShikigamiControllerOption = "concentrarPoder" | "fantocheSupremo" | "invocacoesMoveis" | "invocacoesEconomicas" | "invocacoesResistentes" | "melhoriaResistencia" | "melhoriaMobilidade" | "melhoriaPrecisao";
-export type ShikigamiTrait = "movimentoAlternativo" | "defesaAlternativa" | "bonusPericiaA" | "tamanho" | "defensor" | "bonusPericiaB" | "robustez" | "movel" | "perito";
+export type ShikigamiTrait = "movimentoAlternativo" | "defesaAlternativa" | "bonusPericiaA" | "tamanho" | "defensor" | "bonusPericiaB" | "bonusPericiaC" | "robustez" | "movel" | "perito";
 export type ShikigamiSize = "minusculo" | "pequeno" | "medio" | "grande" | "enorme" | "colossal";
 
 export const SHIKIGAMI_GRADE_PROGRESSIONS = {
@@ -169,7 +176,7 @@ export function calculateShikigamiReferenceStats(input: {
   const defenseValue = valueOf(defenseAttribute);
   const controller = input.controllerOptions ?? {};
   const traits = input.traits ?? {};
-  const hasPrimarySkillBonus = Boolean(traits.bonusPericiaA || (traits as Record<string, boolean>).bonusPericia);
+  const selectedSkillBonuses = Number(Boolean(traits.bonusPericiaA || (traits as Record<string, boolean>).bonusPericia)) + Number(Boolean(traits.bonusPericiaB)) + Number(Boolean(traits.bonusPericiaC));
   const supreme = Boolean(controller.fantocheSupremo);
   const concentrateHealthBonus = controller.concentrarPoder ? (level >= 18 ? 50 : level >= 12 ? 30 : level >= 6 ? 15 : 10) : 0;
   const concentrateDefenseBonus = controller.concentrarPoder ? (level >= 18 ? 6 : level >= 12 ? 4 : level >= 6 ? 2 : 2) : 0;
@@ -196,7 +203,7 @@ export function calculateShikigamiReferenceStats(input: {
   const baseMovement = type === "tecnica" ? 7.5 : 6;
   const movementModifier = Math.max(0, modifierOf(traits.movimentoAlternativo ? movementAttribute : "destreza")) * 1.5;
   const movement = baseMovement + movementModifier + (traits.movel ? traitProgression.mobileMovement : 0) + globalMobility + controllerMobility + (supreme ? 4.5 : 0);
-  const additionalEntryCount = Math.max(0, Number(input.additionalEntryCount) || 0);
+  const additionalEntryCount = Math.min(20, Math.max(0, Number(input.additionalEntryCount) || 0));
   const [costBase, costThreshold] = type === "tecnica"
     ? ({ quarto: [2, 3], terceiro: [5, 4], segundo: [8, 5], primeiro: [10, 6], especial: [12, 7] } as Record<InvocationGrade, [number, number]>)[input.grade]
     : ({ quarto: [2, 2], terceiro: [4, 2], segundo: [6, 3], primeiro: [8, 3], especial: [12, 4] } as Record<InvocationGrade, [number, number]>)[input.grade];
@@ -219,7 +226,7 @@ export function calculateShikigamiReferenceStats(input: {
     precisionCdBonus,
     skillSlots,
     skillBonusPerSelection: traitProgression.skillBonus,
-    skillBonus: (hasPrimarySkillBonus ? traitProgression.skillBonus : 0) + (traits.bonusPericiaB ? traitProgression.skillBonus : 0),
+    skillBonus: selectedSkillBonuses * traitProgression.skillBonus,
     defenderArmor: traits.defensor ? traitProgression.defenderArmor : 0,
     skillTypeBonus: type === "tecnica" ? cost : mastery,
     skillMasteryBonus: type === "tecnica" ? cost + Math.floor(mastery / 2) : Math.floor(mastery * 1.5),

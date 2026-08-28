@@ -41,7 +41,7 @@ As características de Shikigami formam grupos selecionáveis: Movimento Alterna
 | Características do Shikigami | Linhas por código de característica, estado ativo e configuração opcional. | Efeitos de defesa, movimento, vida, perícia e atributos quando o PDF os define. |
 | Ações e características livres | Elementos estruturados filhos da ficha. | Sem cálculo inventado; textos adicionais permanecem manualmente identificados. |
 
-O modelo persistirá entradas e escolhas separadamente de resultados. Fórmulas só serão implementadas quando estiverem explícitas no PDF ou no livro já fornecido; qualquer caso que o PDF marque como não programado será apresentado como entrada manual, nunca como automação presumida.
+O modelo persiste entradas e escolhas separadamente de resultados desde a migration `0006_famous_khan`. A tabela `shikigamiSheets` armazena a ficha-base por Homebrew/módulo; atributos, perícias, opções e ações/características livres vivem respectivamente em `shikigamiAttributes`, `shikigamiSkills`, `shikigamiOptions` e `shikigamiAbilities`. Os resultados continuam derivados pelo motor compartilhado, sem serem duplicados no banco. Fórmulas só são implementadas quando explícitas nas referências; qualquer caso sem automação documentada é mantido como entrada manual identificada.
 
 ## Planilha Google de Shikigamis — referência prioritária
 

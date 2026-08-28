@@ -23,10 +23,17 @@ describe("ShikigamiConfiguration", () => {
     expect(screen.getAllByText("Carisma").length).toBeGreaterThan(0);
     expect(screen.getByText("0/10")).toBeTruthy();
     expect(screen.getAllByText("Modificador: -1")).toHaveLength(6);
+    expect(screen.getByText("Bônus em Perícia C")).toBeTruthy();
+    expect(screen.getAllByText("0/10 vagas da planilha")).toHaveLength(2);
+    expect(screen.getByRole("progressbar", { name: "Estado da invocação: 100%" })).toBeTruthy();
 
     const controllerToggle = screen.getByLabelText(/Concentrar Poder/);
     expect((controllerToggle as HTMLInputElement).checked).toBe(false);
     fireEvent.click(controllerToggle);
     expect((controllerToggle as HTMLInputElement).checked).toBe(true);
+
+    const thirdSkillBonus = screen.getByLabelText(/Bônus em Perícia C/);
+    fireEvent.click(thirdSkillBonus);
+    expect((thirdSkillBonus as HTMLInputElement).checked).toBe(true);
   });
 });

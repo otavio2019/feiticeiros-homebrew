@@ -15,9 +15,11 @@ describe("ShikigamiReadCard", () => {
       attributes: { forca: 10, destreza: 12, constituicao: 10, inteligencia: 14, sabedoria: 10, carisma: 10 },
       lostHealth: 5,
       controllerOptions: { invocacoesEconomicas: true, melhoriaResistencia: true },
-      traits: { tamanho: true, bonusPericiaA: true },
+      traits: { tamanho: true, bonusPericiaA: true, bonusPericiaC: true },
       size: "grande",
       bonusSkillA: "feiticaria",
+      bonusSkillC: "ocultismo",
+      skills: { feiticaria: { otherBonus: 2, mastery: true }, ocultismo: { specialty: true } },
       abilities: [{ id: "ac-1", kind: "acao", name: "Selo Cortante", description: "Um ataque de selo amaldiçoado." }],
     }} />);
 
@@ -27,5 +29,9 @@ describe("ShikigamiReadCard", () => {
     expect(screen.getByText("21")).toBeTruthy();
     expect(screen.getByText(/Tamanho: ataques \+2; resistências -2/)).toBeTruthy();
     expect(screen.getByText("Selo Cortante")).toBeTruthy();
+    expect(screen.getByRole("progressbar", { name: "Estado da invocação: 88%" })).toBeTruthy();
+    expect(screen.getByText("Perícias calculadas")).toBeTruthy();
+    expect(screen.getAllByText("Feitiçaria").length).toBeGreaterThan(0);
+    expect(screen.getByText("Bônus em Perícia C")).toBeTruthy();
   });
 });

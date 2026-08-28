@@ -1,0 +1,1 @@
+ALTER TABLE `shikigamiSheets` ADD `bonusSkillC` enum('feiticaria','investigacao','historia','medicina','religiao','ocultismo','prestidigitacao','percepcao','intuicao','furtividade','oficio','reflexos','fortitude','vontade','astucia','integridade') DEFAULT 'historia' NOT NULL;

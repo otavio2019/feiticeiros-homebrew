@@ -18,6 +18,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:verify": "tsx scripts/verify-database.ts",
+    "verify:shikigami": "tsx scripts/verify-shikigami-normalization.ts",
     "verify:cloudinary": "tsx scripts/verify-cloudinary.ts",
     "verify:smtp": "tsx scripts/verify-smtp.ts"
   },

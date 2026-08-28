@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import {
   calculateAttributeModifier,
   calculateShikigamiReferenceStats,
+  INVOCATION_GRADE_LABELS,
   INVOCATION_GRADE_RULES,
   SHIKIGAMI_TYPE_LABELS,
   SHIKIGAMI_TYPES,
@@ -33,9 +34,9 @@ const SKILLS = [
 
 const CONTROLLER_OPTIONS = [
   ["concentrarPoder", "Concentrar Poder"], ["fantocheSupremo", "Fantoche Supremo"],
-  ["invocacoesMoveis", "Invocações Móveis"], ["melhoriaResistencia", "Melhoria: Resistência"],
-  ["invocacoesEconomicas", "Invocações Econômicas"], ["melhoriaMobilidade", "Melhoria: Mobilidade"],
-  ["invocacoesResistentes", "Invocações Resistentes"], ["melhoriaPrecisao", "Melhoria: Precisão (CD)"],
+  ["invocacoesMoveis", "Invocações Móveis"], ["melhoriaResistencia", "Melhoria de Controlador: Resistência"],
+  ["invocacoesEconomicas", "Invocações Econômicas"], ["melhoriaMobilidade", "Melhoria de Controlador: Mobilidade"],
+  ["invocacoesResistentes", "Invocações Resistentes"], ["melhoriaPrecisao", "Melhoria de Controlador: Precisão (CD)"],
 ] as const;
 
 const SIZE_OPTIONS: ReadonlyArray<readonly [ShikigamiSize, string]> = [
@@ -64,6 +65,7 @@ type ShikigamiSheet = {
   defenseAttribute?: InvocationAttribute;
   bonusSkillA?: string;
   bonusSkillB?: string;
+  bonusSkillC?: string;
   bonusSkill?: string;
   size?: ShikigamiSize;
   abilities?: ShikigamiAbility[];
@@ -151,13 +153,14 @@ export function ShikigamiConfiguration({
         <NumberField label="Perdidos" value={lostHealth} min={0} onChange={value => updateSheet({ lostHealth: Math.max(0, value) })} alert={lostHealth > 0} />
         <Stat label="Atuais" value={String(currentHealth)} alert={currentHealth === 0} />
       </div>
+      <div className="mt-3" aria-label={`Estado da invocação: ${stats.health ? Math.min(100, Math.round((currentHealth * 100) / stats.health)) : 0}%`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={stats.health ? Math.min(100, Math.round((currentHealth * 100) / stats.health)) : 0}><div className="h-1.5 overflow-hidden rounded-full bg-white/8"><div className="h-full rounded-full bg-fuchsia-400 transition-[width] duration-200" style={{ width: `${stats.health ? Math.min(100, Math.round((currentHealth * 100) / stats.health)) : 0}%` }} /></div></div>
     </Section>
 
     <Section title="Informações">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <TextField label="Nome" value={sheet.name ?? ""} onChange={name => updateSheet({ name })} />
         <div><Label className="text-xs text-stone-300">Tipo de Shikigami</Label><select value={type} onChange={event => updateSheet({ type: event.target.value as ShikigamiType })} className={selectClass}>{SHIKIGAMI_TYPES.map(value => <option key={value} value={value}>{SHIKIGAMI_TYPE_LABELS[value]}</option>)}</select></div>
-        <div><Label className="text-xs text-stone-300">Grau</Label><select value={grade} onChange={event => updateSheet({ grade: event.target.value as InvocationGrade })} className={selectClass}>{Object.keys(INVOCATION_GRADE_RULES).map(value => <option key={value} value={value}>{titleCase(value)} Grau</option>)}</select></div>
+        <div><Label className="text-xs text-stone-300">Grau</Label><select value={grade} onChange={event => updateSheet({ grade: event.target.value as InvocationGrade })} className={selectClass}>{Object.keys(INVOCATION_GRADE_RULES).map(value => <option key={value} value={value}>{INVOCATION_GRADE_LABELS[value as InvocationGrade]}</option>)}</select></div>
         <NumberField label="Nível" value={userLevel} min={1} onChange={value => updateSheet({ userLevel: Math.max(1, value) })} />
         <NumberField label="Maestria" value={mastery} min={0} onChange={value => updateSheet({ mastery: Math.max(0, value) })} />
       </div>
@@ -182,7 +185,7 @@ export function ShikigamiConfiguration({
         const state = skills[key] ?? {};
         const hasMastery = Boolean(state.mastery ?? state.trained);
         const hasSpecialty = Boolean(state.specialty);
-        const traitSkillBonus = (traits.bonusPericiaA && (sheet.bonusSkillA ?? sheet.bonusSkill) === key ? stats.skillBonusPerSelection : 0) + (traits.bonusPericiaB && sheet.bonusSkillB === key ? stats.skillBonusPerSelection : 0);
+        const traitSkillBonus = (traits.bonusPericiaA && (sheet.bonusSkillA ?? sheet.bonusSkill) === key ? stats.skillBonusPerSelection : 0) + (traits.bonusPericiaB && sheet.bonusSkillB === key ? stats.skillBonusPerSelection : 0) + (traits.bonusPericiaC && sheet.bonusSkillC === key ? stats.skillBonusPerSelection : 0);
         const total = Number(state.otherBonus ?? state.manualBonus ?? 0) + Math.floor(userLevel / 2) + calculateAttributeModifier(inputAttribute(attribute)) + (hasSpecialty ? stats.skillMasteryBonus : hasMastery ? stats.skillTypeBonus : 0) + traitSkillBonus;
         return <div key={key} className="grid grid-cols-[minmax(0,1fr)_42px_38px_38px_44px] items-center gap-1 rounded-md border border-white/6 px-2 py-1.5 text-[10px]"><span className="truncate text-stone-300">{label} <em className="text-stone-600">{attribute.slice(0, 3).toUpperCase()}</em></span><Input aria-label={`Outros de ${label}`} type="number" value={Number(state.otherBonus ?? state.manualBonus ?? 0)} onChange={event => updateSkill(key, { otherBonus: Number(event.target.value) })} className="h-7 border-white/8 bg-black/10 px-1 text-[10px]" /><label className="flex items-center gap-0.5 text-stone-500"><input aria-label={`Maestria em ${label}`} type="checkbox" checked={hasMastery} onChange={event => updateSkill(key, { mastery: event.target.checked })} />Mt.</label><label className="flex items-center gap-0.5 text-stone-500"><input aria-label={`Especialização em ${label}`} type="checkbox" checked={hasSpecialty} onChange={event => updateSkill(key, { specialty: event.target.checked })} />Es.</label><span className="text-right text-rose-200">{total >= 0 ? "+" : ""}{total}</span></div>;
       })}</div>
@@ -190,15 +193,16 @@ export function ShikigamiConfiguration({
 
     <div className="mt-4 grid gap-4 lg:grid-cols-2">
       <ChoicePanel title="Habilidades de Controlador" options={CONTROLLER_OPTIONS} values={controllerOptions} onToggle={key => toggle("controllerOptions", key)} />
-      <section className="rounded-xl border border-white/8 bg-black/10 p-4"><p className="text-xs font-semibold text-stone-200">Características do Shikigami</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><Toggle label="Movimento Alternativo" checked={Boolean(traits.movimentoAlternativo)} onChange={() => toggle("traits", "movimentoAlternativo")} /><Toggle label="Defesa Alternativa" checked={Boolean(traits.defesaAlternativa)} onChange={() => toggle("traits", "defesaAlternativa")} /><Toggle label="Bônus em Perícia A" checked={Boolean(traits.bonusPericiaA)} onChange={() => toggle("traits", "bonusPericiaA")} /><Toggle label="Tamanho" checked={Boolean(traits.tamanho)} onChange={() => toggle("traits", "tamanho")} /><Toggle label="Defensor" checked={Boolean(traits.defensor)} onChange={() => toggle("traits", "defensor")} /><Toggle label="Bônus em Perícia B" checked={Boolean(traits.bonusPericiaB)} onChange={() => toggle("traits", "bonusPericiaB")} /><Toggle label="Robustez" checked={Boolean(traits.robustez)} onChange={() => toggle("traits", "robustez")} /><Toggle label="Móvel" checked={Boolean(traits.movel)} onChange={() => toggle("traits", "movel")} /><Toggle label="Perito" checked={Boolean(traits.perito)} onChange={() => toggle("traits", "perito")} /></div></section>
+      <section className="rounded-xl border border-white/8 bg-black/10 p-4"><p className="text-xs font-semibold text-stone-200">Características do Shikigami</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><Toggle label="Movimento Alternativo" checked={Boolean(traits.movimentoAlternativo)} onChange={() => toggle("traits", "movimentoAlternativo")} /><Toggle label="Defesa Alternativa" checked={Boolean(traits.defesaAlternativa)} onChange={() => toggle("traits", "defesaAlternativa")} /><Toggle label="Bônus em Perícia A" checked={Boolean(traits.bonusPericiaA)} onChange={() => toggle("traits", "bonusPericiaA")} /><Toggle label="Tamanho" checked={Boolean(traits.tamanho)} onChange={() => toggle("traits", "tamanho")} /><Toggle label="Defensor" checked={Boolean(traits.defensor)} onChange={() => toggle("traits", "defensor")} /><Toggle label="Bônus em Perícia B" checked={Boolean(traits.bonusPericiaB)} onChange={() => toggle("traits", "bonusPericiaB")} /><Toggle label="Bônus em Perícia C" checked={Boolean(traits.bonusPericiaC)} onChange={() => toggle("traits", "bonusPericiaC")} /><Toggle label="Robustez" checked={Boolean(traits.robustez)} onChange={() => toggle("traits", "robustez")} /><Toggle label="Móvel" checked={Boolean(traits.movel)} onChange={() => toggle("traits", "movel")} /><Toggle label="Perito" checked={Boolean(traits.perito)} onChange={() => toggle("traits", "perito")} /></div></section>
     </div>
 
     <Section title="Configurações das características">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <AttributeSelect label="Movimento alternativo" value={movementAttribute} disabled={!traits.movimentoAlternativo} onChange={movementAttribute => updateSheet({ movementAttribute })} />
         <AttributeSelect label="Defesa alternativa" value={defenseAttribute} disabled={!traits.defesaAlternativa} onChange={defenseAttribute => updateSheet({ defenseAttribute })} />
         <SkillSelect label="Bônus em perícia A" value={sheet.bonusSkillA ?? sheet.bonusSkill ?? "feiticaria"} disabled={!traits.bonusPericiaA} onChange={bonusSkillA => updateSheet({ bonusSkillA })} />
         <SkillSelect label="Bônus em perícia B" value={sheet.bonusSkillB ?? "investigacao"} disabled={!traits.bonusPericiaB} onChange={bonusSkillB => updateSheet({ bonusSkillB })} />
+        <SkillSelect label="Bônus em perícia C" value={sheet.bonusSkillC ?? "historia"} disabled={!traits.bonusPericiaC} onChange={bonusSkillC => updateSheet({ bonusSkillC })} />
         <div><Label className="text-xs text-stone-300">Tamanho</Label><select disabled={!traits.tamanho} value={size} onChange={event => updateSheet({ size: event.target.value as ShikigamiSize })} className={`${selectClass} disabled:opacity-40`}>{SIZE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
       </div>
       {traits.tamanho && <p className="mt-3 text-[10px] text-stone-500">Modificadores da planilha para <strong className="text-stone-300">{SIZE_OPTIONS.find(([value]) => value === size)?.[1]}</strong>: ataques {stats.sizeAttackModifier >= 0 ? "+" : ""}{stats.sizeAttackModifier}; resistências {stats.sizeResistanceModifier >= 0 ? "+" : ""}{stats.sizeResistanceModifier}. Registre-os nas ações ou testes manuais aplicáveis.</p>}
@@ -252,5 +256,5 @@ function SkillSelect({ label, value, disabled, onChange }: { label: string; valu
 
 function AbilitySection({ title, description, kind, abilities, onAdd, onChange, onRemove }: { title: string; description: string; kind: "acao" | "caracteristica"; abilities: ShikigamiAbility[]; onAdd: (kind: "acao" | "caracteristica") => void; onChange: (id: string, changes: Partial<ShikigamiAbility>) => void; onRemove: (id: string) => void }) {
   const entries = abilities.filter(item => (item.kind ?? "acao") === kind);
-  return <Section title={title}><div className="flex items-start justify-between gap-3"><p className="text-[10px] leading-relaxed text-stone-500">{description}</p><Button type="button" variant="outline" size="sm" onClick={() => onAdd(kind)} className="h-8 shrink-0 border-white/10 text-xs text-stone-200"><Plus size={13} className="mr-1" />Adicionar</Button></div><div className="mt-3 space-y-2">{entries.map((entry, index) => <div key={entry.id} className="rounded-md border border-white/7 p-2"><div className="flex gap-2"><Input value={entry.name} onChange={event => onChange(entry.id, { name: event.target.value })} placeholder={`${kind === "acao" ? "Ação" : "Característica"} ${index + 1}`} className="h-8 bg-black/10 text-xs text-stone-200" /><button type="button" onClick={() => onRemove(entry.id)} aria-label={`Remover ${title.toLowerCase()}`} className="text-stone-500 hover:text-rose-200"><Trash2 size={14} /></button></div><textarea value={entry.description} onChange={event => onChange(entry.id, { description: event.target.value })} placeholder="Descrição, efeito, ataque ou condição." className="mt-2 min-h-16 w-full rounded-md border border-white/8 bg-black/10 p-2 text-xs text-stone-300" /></div>)}{!entries.length && <p className="text-[10px] text-stone-600">Nenhum registro adicional.</p>}</div></Section>;
+  return <Section title={title}><div className="flex items-start justify-between gap-3"><p className="text-[10px] leading-relaxed text-stone-500">{description}</p><Button type="button" variant="outline" size="sm" disabled={entries.length >= 10} onClick={() => onAdd(kind)} className="h-8 shrink-0 border-white/10 text-xs text-stone-200"><Plus size={13} className="mr-1" />Adicionar</Button></div><p className="mt-2 text-[10px] text-stone-500">{entries.length}/10 vagas da planilha</p><div className="mt-3 space-y-2">{entries.map((entry, index) => <div key={entry.id} className="rounded-md border border-white/7 p-2"><div className="flex gap-2"><Input value={entry.name} onChange={event => onChange(entry.id, { name: event.target.value })} placeholder={`${kind === "acao" ? "Ação" : "Característica"} ${index + 1}`} className="h-8 bg-black/10 text-xs text-stone-200" /><button type="button" onClick={() => onRemove(entry.id)} aria-label={`Remover ${title.toLowerCase()}`} className="text-stone-500 hover:text-rose-200"><Trash2 size={14} /></button></div><textarea value={entry.description} onChange={event => onChange(entry.id, { description: event.target.value })} placeholder="Descrição, efeito, ataque ou condição." className="mt-2 min-h-16 w-full rounded-md border border-white/8 bg-black/10 p-2 text-xs text-stone-300" /></div>)}{!entries.length && <p className="text-[10px] text-stone-600">Nenhum registro adicional.</p>}</div></Section>;
 }
