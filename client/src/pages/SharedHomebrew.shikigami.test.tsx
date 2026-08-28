@@ -34,4 +34,23 @@ describe("ShikigamiReadCard", () => {
     expect(screen.getAllByText("Feitiçaria").length).toBeGreaterThan(0);
     expect(screen.getByText("Bônus em Perícia C")).toBeTruthy();
   });
+
+  it("mantém os rótulos literais de Grau Especial e das melhorias do controlador", () => {
+    const view = render(<ShikigamiReadCard sheet={{
+      name: "Guardião Especial",
+      grade: "especial",
+      type: "comum",
+      userLevel: 1,
+      attributes: {},
+      controllerOptions: { melhoriaResistencia: true, melhoriaMobilidade: true, melhoriaPrecisao: true },
+      traits: {},
+      skills: {},
+      abilities: [],
+    }} />);
+
+    expect(view.getByText(/Grau Especial/)).toBeTruthy();
+    expect(view.getAllByText("Melhoria de Controlador: Resistência").length).toBeGreaterThan(0);
+    expect(view.getAllByText("Melhoria de Controlador: Mobilidade").length).toBeGreaterThan(0);
+    expect(view.getAllByText("Melhoria de Controlador: Precisão (CD)").length).toBeGreaterThan(0);
+  });
 });

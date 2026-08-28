@@ -141,7 +141,7 @@
 - [ ] Reestruturar o módulo Shikigami em seções e resultados automáticos que sigam o modelo do PDF, mantendo sobrescritas manuais identificadas.
 - [x] Implementar e testar somente as progressões de Shikigami explicitamente descritas no PDF: Fantoche Supremo, Invocações Resistentes, Mobilidade, Precisão e características por grau.
 - [x] Analisar a planilha Google de Shikigami indicada pelo usuário como fonte prioritária de campos, tabelas, fórmulas e fluxo.
-- [ ] Revisar o criador de Shikigami publicado para seguir a planilha Google quando ela divergir do PDF usado como referência complementar.
+- [x] Revisar o criador de Shikigami publicado para seguir a planilha Google quando ela divergir do PDF usado como referência complementar.
 - [x] Substituir as fórmulas aproximadas de vida, custo, CD, CA, movimento, orçamento de atributos e perícias pelas fórmulas verificadas na planilha Google de Shikigamis.
 - [x] Modelar no criador as opções da planilha Google: três tipos, duas características de bônus em perícia, tamanho e especialização de perícia.
 - [x] Fazer o custo do Shikigami variar pela quantidade de ações e características preenchidas, e expor os modificadores opostos de tamanho presentes na planilha Google.
@@ -149,12 +149,14 @@
 - [x] Cobrir o estado inicial do módulo Shikigami, garantindo que os valores padrão exibidos não produzam pendências falsas.
 - [x] Revalidar em produção a ficha de Shikigami após corrigir a inconsistência de valores padrão.
 - [x] Auditar e normalizar a persistência dos dados mecânicos de Shikigami que ainda vivem somente no JSON da Homebrew, sem duplicar fórmulas ou inventar regras.
-- [ ] Auditar ponto a ponto as divergências restantes entre a planilha Google de Shikigami e o criador publicado, especialmente a lógica de custo por ações/características e quaisquer aproximações estruturais ainda usadas.
-- [ ] Adicionar testes e evidências documentais para cada divergência conhecida entre a planilha Google e o PDF, confirmando que a implementação publicada segue a fonte prioritária.
-- [ ] Alinhar o custo de Shikigami às 20 vagas da planilha — dez ações e dez características — e implementar a terceira seleção de Bônus em Perícia presente na fonte prioritária.
-- [ ] Exibir na ficha de leitura o estado percentual e os totais de perícia calculados que a planilha de Shikigami apresenta.
-- [ ] Usar a nomenclatura literal "Grau Especial" e os rótulos completos de melhorias do controlador exibidos na planilha prioritária.
-- [ ] Corrigir o vazamento de estado ao criar ou abrir uma Homebrew, pois a ficha temporária de Shikigami publicada herdou módulos e conteúdo de outra Homebrew.
+- [x] Auditar ponto a ponto as divergências restantes entre a planilha Google de Shikigami e o criador publicado, especialmente a lógica de custo por ações/características e quaisquer aproximações estruturais ainda usadas.
+- [x] Adicionar testes e evidências documentais para cada divergência conhecida entre a planilha Google e o PDF, confirmando que a implementação publicada segue a fonte prioritária.
+- [x] Alinhar o custo de Shikigami às 20 vagas da planilha — dez ações e dez características — e implementar a terceira seleção de Bônus em Perícia presente na fonte prioritária.
+- [x] Exibir na ficha de leitura o estado percentual e os totais de perícia calculados que a planilha de Shikigami apresenta.
+- [x] Usar a nomenclatura literal "Grau Especial" e os rótulos completos de melhorias do controlador exibidos na planilha prioritária.
+- [x] Corrigir o vazamento de estado ao criar ou abrir uma Homebrew, pois a ficha temporária de Shikigami publicada herdou módulos e conteúdo de outra Homebrew.
+- [x] Adicionar regressões explícitas dos rótulos literais de Shikigami, incluindo "Grau Especial" e melhorias completas do controlador, no editor e na ficha pública.
+- [x] Expandir a auditoria para vincular cada divergência conhecida entre a planilha Google e o PDF ao código, teste e evidência de produção correspondentes.
 - [x] Diagnosticar e corrigir o fluxo de compartilhamento de Homebrews, incluindo geração de link, permissões de visibilidade e abertura da ficha pública.
 - [x] Permitir alterar a visibilidade no editor e impedir copiar ou abrir links de Homebrews privadas, orientando o autor a usar "Não listada" ou "Pública".
 - [x] Sincronizar a visibilidade persistida após salvar antes de liberar o link, impedindo bloqueios indevidos no mesmo editor.

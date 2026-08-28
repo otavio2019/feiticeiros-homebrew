@@ -26,6 +26,10 @@ describe("ShikigamiConfiguration", () => {
     expect(screen.getByText("Bônus em Perícia C")).toBeTruthy();
     expect(screen.getAllByText("0/10 vagas da planilha")).toHaveLength(2);
     expect(screen.getByRole("progressbar", { name: "Estado da invocação: 100%" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Grau Especial" })).toBeTruthy();
+    expect(screen.getByText("Melhoria de Controlador: Resistência")).toBeTruthy();
+    expect(screen.getByText("Melhoria de Controlador: Mobilidade")).toBeTruthy();
+    expect(screen.getByText("Melhoria de Controlador: Precisão (CD)")).toBeTruthy();
 
     const controllerToggle = screen.getByLabelText(/Concentrar Poder/);
     expect((controllerToggle as HTMLInputElement).checked).toBe(false);
