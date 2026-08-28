@@ -154,3 +154,4 @@
 - [ ] Alinhar o custo de Shikigami às 20 vagas da planilha — dez ações e dez características — e implementar a terceira seleção de Bônus em Perícia presente na fonte prioritária.
 - [ ] Exibir na ficha de leitura o estado percentual e os totais de perícia calculados que a planilha de Shikigami apresenta.
 - [ ] Usar a nomenclatura literal "Grau Especial" e os rótulos completos de melhorias do controlador exibidos na planilha prioritária.
+- [ ] Corrigir o vazamento de estado ao criar ou abrir uma Homebrew, pois a ficha temporária de Shikigami publicada herdou módulos e conteúdo de outra Homebrew.

@@ -51,6 +51,10 @@ import { useLocation } from "wouter";
 
 type WorkspaceTab = "visao" | "biblioteca" | "editor";
 
+export function isCurrentHomebrewDetail(detail: { id: number } | undefined, activeHomebrewId: number | null) {
+  return Boolean(detail && activeHomebrewId && detail.id === activeHomebrewId);
+}
+
 export function AccountControl({
   user,
   loading,
@@ -298,10 +302,12 @@ export default function Home() {
       setTab("editor");
       setEditorTitle(homebrew?.title ?? title);
       setEditorSummary(homebrew?.summary ?? summary);
-      setEditorModules(selectedModules);
+      setEditorModules([]);
+      setActiveModule("outros");
       setActiveHomebrewId(homebrew?.id ?? null);
       setCoverImageUrl("");
       setDraftData({});
+      setAttemptedSave(false);
       toast.success("Estrutura da Homebrew criada.");
     },
     onError: error => toast.error(error.message),
@@ -346,11 +352,13 @@ export default function Home() {
   });
 
   const homebrews = isAuthenticated ? libraryQuery.data ?? [] : demoHomebrews;
-  const activeModuleId = detailQuery.data?.modules.find(module => module.type === activeModule)?.id;
+  const activeDetail = isCurrentHomebrewDetail(detailQuery.data, activeHomebrewId) ? detailQuery.data : undefined;
+  const isLoadingActiveHomebrew = Boolean(activeHomebrewId && isAuthenticated && !activeDetail);
+  const activeModuleId = activeDetail?.modules.find(module => module.type === activeModule)?.id;
   const validationItems = buildHomebrewValidation(editorTitle, editorSummary, activeModule, manualMode, draftData);
   const validationPending = validationItems.filter(item => !item.valid);
   useEffect(() => {
-    const detail = detailQuery.data;
+    const detail = activeDetail;
     if (!detail) return;
     setEditorTitle(detail.title);
     setEditorSummary(detail.summary);
@@ -359,7 +367,7 @@ export default function Home() {
     setActiveModule(detail.modules[0]?.type ?? "outros");
     setCoverImageUrl(detail.coverImageUrl ?? "");
     setDraftData(detail.data ?? {});
-  }, [detailQuery.data]);
+  }, [activeDetail]);
   const filteredHomebrews = useMemo(() => {
     return homebrews.filter(homebrew => {
       const matchesSearch = `${homebrew.title} ${homebrew.summary}`.toLowerCase().includes(search.toLowerCase());
@@ -477,8 +485,9 @@ export default function Home() {
     setActiveHomebrewId(homebrew.id > 0 ? homebrew.id : null);
     setCoverImageUrl("");
     setDraftData({});
-    setEditorModules(homebrew.title.includes("Voto") ? ["votos", "tecnicas", "mecanicas"] : initialModules);
-    setActiveModule(homebrew.title.includes("Voto") ? "votos" : "tecnicas");
+    setEditorModules(homebrew.id > 0 ? [] : homebrew.title.includes("Voto") ? ["votos", "tecnicas", "mecanicas"] : initialModules);
+    setActiveModule(homebrew.id > 0 ? "outros" : homebrew.title.includes("Voto") ? "votos" : "tecnicas");
+    setAttemptedSave(false);
     setTab("editor");
   };
 
@@ -629,7 +638,9 @@ export default function Home() {
             </section>
           )}
 
-          {tab === "editor" && (
+          {tab === "editor" && (isLoadingActiveHomebrew ? (
+            <section className="grid h-[calc(100vh-64px)] place-items-center bg-[#0e0d15]/35 px-7"><div className="rounded-2xl border border-white/8 bg-[#17141f]/80 px-6 py-5 text-center"><p className="text-sm font-semibold text-stone-200">Carregando a Homebrew selecionada…</p><p className="mt-2 text-xs text-stone-500">Os dados da ficha anterior não são exibidos durante a troca.</p></div></section>
+          ) : (
             <section className="h-[calc(100vh-64px)] overflow-hidden">
               <div className="flex h-full min-w-[760px]">
                 <div className="w-[228px] shrink-0 overflow-y-auto border-r border-white/7 bg-[#121019]/70 px-3 py-5">
@@ -682,7 +693,7 @@ export default function Home() {
                 </aside>
               </div>
             </section>
-          )}
+          ))}
         </main>
       </div>
 
