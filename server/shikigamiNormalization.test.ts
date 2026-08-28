@@ -70,4 +70,16 @@ describe("normalização relacional de Shikigami", () => {
     expect(normalized?.sheet).toMatchObject({ type: "comum", grade: "quarto", movementAttribute: "destreza", bonusSkillA: "feiticaria", size: "medio" });
     expect(normalized?.attributes.find(item => item.attribute === "forca")?.value).toBe(8);
   });
+
+  it("mantém no máximo dez ações e dez características, como as vinte células da planilha", () => {
+    const normalized = normalizeShikigamiDraft({
+      abilities: [
+        ...Array.from({ length: 12 }, (_, index) => ({ id: `acao-${index}`, kind: "acao", name: `Ação ${index}` })),
+        ...Array.from({ length: 11 }, (_, index) => ({ id: `traco-${index}`, kind: "caracteristica", name: `Traço ${index}` })),
+      ],
+    });
+    expect(normalized?.abilities).toHaveLength(20);
+    expect(normalized?.abilities.filter(item => item.kind === "acao")).toHaveLength(10);
+    expect(normalized?.abilities.filter(item => item.kind === "caracteristica")).toHaveLength(10);
+  });
 });

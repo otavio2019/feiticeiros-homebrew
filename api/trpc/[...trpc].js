@@ -599,7 +599,14 @@ function normalizeShikigamiDraft(rawSheet) {
   const skills = isRecord(rawSheet.skills) ? rawSheet.skills : {};
   const controllerOptions = isRecord(rawSheet.controllerOptions) ? rawSheet.controllerOptions : {};
   const traits = isRecord(rawSheet.traits) ? rawSheet.traits : {};
-  const abilities = Array.isArray(rawSheet.abilities) ? rawSheet.abilities.filter(isRecord) : [];
+  const rawAbilities = Array.isArray(rawSheet.abilities) ? rawSheet.abilities.filter(isRecord) : [];
+  const abilityCounts = { acao: 0, caracteristica: 0 };
+  const abilities = rawAbilities.filter((ability) => {
+    const kind = enumValue(ability.kind, ["acao", "caracteristica"], "acao");
+    if (abilityCounts[kind] >= 10) return false;
+    abilityCounts[kind] += 1;
+    return true;
+  });
   return {
     sheet: {
       name: textValue(rawSheet.name).slice(0, 160),
