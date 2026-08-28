@@ -50,9 +50,22 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 
 type WorkspaceTab = "visao" | "biblioteca" | "editor";
+export type HomebrewVisibility = "private" | "unlisted" | "public";
 
 export function isCurrentHomebrewDetail(detail: { id: number } | undefined, activeHomebrewId: number | null) {
   return Boolean(detail && activeHomebrewId && detail.id === activeHomebrewId);
+}
+
+export function isShareableVisibility(visibility: HomebrewVisibility | undefined) {
+  return visibility === "unlisted" || visibility === "public";
+}
+
+export function normalizeHomebrewVisibility(value: unknown): HomebrewVisibility {
+  return value === "unlisted" || value === "public" ? value : "private";
+}
+
+export function buildShareUrl(origin: string, shareId: string) {
+  return `${origin}/s/${shareId}`;
 }
 
 export function AccountControl({
@@ -282,12 +295,13 @@ export default function Home() {
   const [selectedModules, setSelectedModules] = useState<HomebrewModuleType[]>(initialModules);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
-  const [visibility, setVisibility] = useState<"private" | "unlisted" | "public">("private");
+  const [visibility, setVisibility] = useState<HomebrewVisibility>("private");
   const [manualMode, setManualMode] = useState(false);
   const [editorModules, setEditorModules] = useState<HomebrewModuleType[]>(initialModules);
   const [activeModule, setActiveModule] = useState<HomebrewModuleType>("tecnicas");
   const [editorTitle, setEditorTitle] = useState(demoHomebrews[0].title);
   const [editorSummary, setEditorSummary] = useState(demoHomebrews[0].summary);
+  const [editorVisibility, setEditorVisibility] = useState<HomebrewVisibility>("private");
   const [activeHomebrewId, setActiveHomebrewId] = useState<number | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [draftData, setDraftData] = useState<Record<string, unknown>>({});
@@ -302,6 +316,7 @@ export default function Home() {
       setTab("editor");
       setEditorTitle(homebrew?.title ?? title);
       setEditorSummary(homebrew?.summary ?? summary);
+      setEditorVisibility(normalizeHomebrewVisibility(homebrew?.visibility ?? visibility));
       setEditorModules([]);
       setActiveModule("outros");
       setActiveHomebrewId(homebrew?.id ?? null);
@@ -362,6 +377,7 @@ export default function Home() {
     if (!detail) return;
     setEditorTitle(detail.title);
     setEditorSummary(detail.summary);
+    setEditorVisibility(normalizeHomebrewVisibility(detail.visibility));
     setManualMode(detail.manualMode);
     setEditorModules(detail.modules.map(module => module.type));
     setActiveModule(detail.modules[0]?.type ?? "outros");
@@ -419,7 +435,7 @@ export default function Home() {
     }
     const dataWithValidation = { ...draftData, validation: validationItems, validationUpdatedAt: new Date().toISOString() };
     setDraftData(dataWithValidation);
-    saveMutation.mutate({ id: activeHomebrewId, title: editorTitle, summary: editorSummary, manualMode, coverImageUrl: coverImageUrl || null, data: dataWithValidation });
+    saveMutation.mutate({ id: activeHomebrewId, title: editorTitle, summary: editorSummary, visibility: editorVisibility, manualMode, coverImageUrl: coverImageUrl || null, data: dataWithValidation });
   };
 
   const addNextModule = () => {
@@ -437,7 +453,7 @@ export default function Home() {
   };
 
   const removeCover = () => {
-    const image = detailQuery.data?.images.find(item => item.url === coverImageUrl);
+    const image = activeDetail?.images.find(item => item.url === coverImageUrl);
     setCoverImageUrl("");
     if (activeHomebrewId && isAuthenticated) {
       saveMutation.mutate({ id: activeHomebrewId, coverImageUrl: null });
@@ -481,6 +497,7 @@ export default function Home() {
   const openEditor = (homebrew: (typeof demoHomebrews)[number]) => {
     setEditorTitle(homebrew.title);
     setEditorSummary(homebrew.summary);
+    setEditorVisibility(normalizeHomebrewVisibility(homebrew.visibility));
     setManualMode(homebrew.manualMode);
     setActiveHomebrewId(homebrew.id > 0 ? homebrew.id : null);
     setCoverImageUrl("");
@@ -492,13 +509,29 @@ export default function Home() {
   };
 
   const copyShareLink = async () => {
-    const url = `${window.location.origin}/s/${detailQuery.data?.shareId ?? "jardim-demo"}`;
+    const currentVisibility = activeDetail?.visibility ?? (!activeHomebrewId ? "public" : "private");
+    const shareId = activeDetail?.shareId ?? (!activeHomebrewId ? "jardim-demo" : "");
+    if (!isShareableVisibility(currentVisibility) || !shareId) {
+      toast.info("Para compartilhar, escolha Não listada ou Pública e salve a Homebrew.");
+      return;
+    }
+    const url = buildShareUrl(window.location.origin, shareId);
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link de leitura copiado.");
     } catch {
       toast.message("Link pronto para compartilhar: " + url);
     }
+  };
+
+  const openSharedHomebrew = () => {
+    const currentVisibility = activeDetail?.visibility ?? (!activeHomebrewId ? "public" : "private");
+    const shareId = activeDetail?.shareId ?? (!activeHomebrewId ? "jardim-demo" : "");
+    if (!isShareableVisibility(currentVisibility) || !shareId) {
+      toast.info("Para abrir a ficha pública, escolha Não listada ou Pública e salve a Homebrew.");
+      return;
+    }
+    setLocation(`/s/${shareId}`);
   };
 
   return (
@@ -665,7 +698,7 @@ export default function Home() {
                     <div className="mt-7 space-y-4">
                       <div className="rounded-2xl border border-white/8 bg-[#17141f]/80 p-5">
                         <SectionHeader number="01" title="Identidade" description="Dê contexto claro para que a Homebrew seja fácil de entender e consultar." />
-                        <div className="mt-5 grid gap-4 sm:grid-cols-2"><div><Label className="text-xs font-medium text-stone-300">Título da Homebrew <span className="text-rose-300">*</span></Label><Input value={editorTitle} onChange={event => setEditorTitle(event.target.value)} className={`mt-2 h-10 bg-white/[0.035] text-xs text-stone-300 ${attemptedSave && editorTitle.trim().length < 3 ? "border-rose-400/70" : "border-white/8"}`} />{attemptedSave && editorTitle.trim().length < 3 && <p className="mt-1 text-[10px] text-rose-300">Use pelo menos 3 caracteres.</p>}</div><Field label={activeModule === "tecnicas" ? "Atributo da técnica" : "Classificação"} value={activeModule === "tecnicas" ? "Sabedoria" : "Oficial"} select /></div>
+                        <div className="mt-5 grid gap-4 sm:grid-cols-2"><div><Label className="text-xs font-medium text-stone-300">Título da Homebrew <span className="text-rose-300">*</span></Label><Input value={editorTitle} onChange={event => setEditorTitle(event.target.value)} className={`mt-2 h-10 bg-white/[0.035] text-xs text-stone-300 ${attemptedSave && editorTitle.trim().length < 3 ? "border-rose-400/70" : "border-white/8"}`} />{attemptedSave && editorTitle.trim().length < 3 && <p className="mt-1 text-[10px] text-rose-300">Use pelo menos 3 caracteres.</p>}</div><div><Label className="text-xs font-medium text-stone-300">Visibilidade e compartilhamento</Label><select aria-label="Visibilidade da Homebrew" value={editorVisibility} onChange={event => setEditorVisibility(event.target.value as HomebrewVisibility)} className="mt-2 h-10 w-full rounded-lg border border-white/8 bg-[#201b29] px-3 text-xs text-stone-300 outline-none focus:border-rose-400/35"><option value="private">Privada — apenas eu</option><option value="unlisted">Não listada — com link</option><option value="public">Pública — comunidade</option></select><p className="mt-1 text-[10px] text-stone-500">Salve como não listada ou pública para liberar o link de leitura.</p></div></div>
                         <div className="mt-4"><Label className="text-xs font-medium text-stone-300">Resumo <span className="text-rose-300">*</span></Label><textarea value={editorSummary} onChange={event => setEditorSummary(event.target.value)} placeholder="Resuma a proposta e o uso desta Homebrew." className={`mt-2 min-h-20 w-full resize-none rounded-xl bg-white/[0.035] p-3 text-xs leading-relaxed text-stone-300 outline-none placeholder:text-stone-600 focus:border-rose-400/35 ${attemptedSave && !editorSummary.trim() ? "border border-rose-400/70" : "border border-white/8"}`} />{attemptedSave && !editorSummary.trim() && <p className="mt-1 text-[10px] text-rose-300">O resumo ajuda a orientar a ficha de leitura.</p>}</div>
                         <div className="mt-4"><Label className="text-xs font-medium text-stone-300">Funcionamento e narrativa</Label><textarea value={String(draftData[`${activeModule}Narrative`] ?? (activeModule === "tecnicas" ? "A técnica fragmenta a percepção do usuário em superfícies refletoras, permitindo registrar e devolver impulsos de energia amaldiçoada." : "Descreva o funcionamento narrativo e os detalhes mecânicos deste elemento."))} onChange={event => setDraftData(current => ({ ...current, [`${activeModule}Narrative`]: event.target.value }))} className="mt-2 min-h-28 w-full resize-none rounded-xl border border-white/8 bg-white/[0.035] p-3 text-xs leading-relaxed text-stone-300 outline-none placeholder:text-stone-600 focus:border-rose-400/35" /></div>
                         <OptionalImagePanel imageUrl={coverImageUrl} onUrlChange={setCoverImageUrl} onLinkUrl={linkCoverByUrl} onUpload={uploadCover} onRemove={removeCover} />
@@ -689,7 +722,7 @@ export default function Home() {
                     <div className="p-4"><h4 className="font-serif text-lg leading-tight text-stone-50">{editorTitle}</h4><p className="mt-2 text-[11px] leading-relaxed text-stone-400">{editorSummary}</p><div className="mt-4 flex flex-wrap gap-1.5">{editorModules.map(module => <span key={module} className="rounded-md bg-white/5 px-2 py-1 text-[9px] font-medium text-stone-400">{HOME_BREW_MODULE_LABELS[module]}</span>)}</div><div className="mt-5 border-t border-white/8 pt-4"><div className="flex items-center justify-between text-[10px]"><span className="text-stone-500">Status</span><span className="font-semibold text-amber-200">Rascunho</span></div><div className="mt-2 flex items-center justify-between text-[10px]"><span className="text-stone-500">Modo manual</span><span className={manualMode ? "font-semibold text-fuchsia-200" : "font-semibold text-emerald-300"}>{manualMode ? "Ativo" : "Desativado"}</span></div></div></div>
                   </div>
                   <div className="mt-5 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] p-3"><div className="flex items-start gap-2"><ShieldCheck size={15} className="mt-0.5 text-emerald-400" /><div><p className="text-[11px] font-semibold text-emerald-100">Consistência contextual</p><p className="mt-1 text-[10px] leading-relaxed text-stone-500">A estrutura inclui os campos necessários para revisão. O balanceamento narrativo continua sob decisão do Narrador.</p></div></div></div>
-                  <button onClick={() => { setLocation(`/s/${detailQuery.data?.shareId ?? "jardim-demo"}`); }} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/8 py-2.5 text-xs font-semibold text-stone-300 hover:bg-white/5"><Link2 size={14} /> Abrir modo leitura</button>
+                  <button onClick={openSharedHomebrew} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/8 py-2.5 text-xs font-semibold text-stone-300 hover:bg-white/5"><Link2 size={14} /> Abrir modo leitura</button>
                 </aside>
               </div>
             </section>

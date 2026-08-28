@@ -40,7 +40,7 @@ export default function SharedHomebrew() {
   };
 
   if (query.isLoading && !isDemo) return <div className="grid min-h-screen place-items-center bg-[#0e0d15] text-sm text-stone-400">Preparando ficha de leitura...</div>;
-  if (!homebrew) return <div className="grid min-h-screen place-items-center bg-[#0e0d15] text-center text-stone-300"><div><p className="text-lg font-semibold">Ficha indisponível</p><Link href="/" className="mt-3 inline-block text-sm text-rose-300">Voltar ao Forge</Link></div></div>;
+  if (!homebrew) return <div className="grid min-h-screen place-items-center bg-[#0e0d15] text-center text-stone-300"><div><p className="text-lg font-semibold">Ficha indisponível</p><p className="mt-2 max-w-sm text-xs leading-relaxed text-stone-500">Verifique o link ou peça ao autor para salvar a Homebrew como não listada ou pública.</p><Link href="/" className="mt-3 inline-block text-sm text-rose-300">Voltar ao Forge</Link></div></div>;
 
   const coverImageUrl = "coverImageUrl" in homebrew ? homebrew.coverImageUrl : null;
   const data = "data" in homebrew ? asRecord(homebrew.data) : null;
