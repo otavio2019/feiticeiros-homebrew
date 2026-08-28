@@ -302,6 +302,7 @@ export default function Home() {
   const [editorTitle, setEditorTitle] = useState(demoHomebrews[0].title);
   const [editorSummary, setEditorSummary] = useState(demoHomebrews[0].summary);
   const [editorVisibility, setEditorVisibility] = useState<HomebrewVisibility>("private");
+  const [persistedVisibility, setPersistedVisibility] = useState<HomebrewVisibility>("private");
   const [activeHomebrewId, setActiveHomebrewId] = useState<number | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [draftData, setDraftData] = useState<Record<string, unknown>>({});
@@ -317,6 +318,7 @@ export default function Home() {
       setEditorTitle(homebrew?.title ?? title);
       setEditorSummary(homebrew?.summary ?? summary);
       setEditorVisibility(normalizeHomebrewVisibility(homebrew?.visibility ?? visibility));
+      setPersistedVisibility(normalizeHomebrewVisibility(homebrew?.visibility ?? visibility));
       setEditorModules([]);
       setActiveModule("outros");
       setActiveHomebrewId(homebrew?.id ?? null);
@@ -328,7 +330,12 @@ export default function Home() {
     onError: error => toast.error(error.message),
   });
   const saveMutation = trpc.homebrew.update.useMutation({
-    onSuccess: () => { libraryQuery.refetch(); toast.success("Alterações salvas no rascunho."); },
+    onSuccess: updated => {
+      setPersistedVisibility(normalizeHomebrewVisibility(updated?.visibility ?? editorVisibility));
+      libraryQuery.refetch();
+      detailQuery.refetch();
+      toast.success("Alterações salvas no rascunho.");
+    },
     onError: error => toast.error(error.message),
   });
   const addModuleMutation = trpc.homebrew.addModule.useMutation({
@@ -378,6 +385,7 @@ export default function Home() {
     setEditorTitle(detail.title);
     setEditorSummary(detail.summary);
     setEditorVisibility(normalizeHomebrewVisibility(detail.visibility));
+    setPersistedVisibility(normalizeHomebrewVisibility(detail.visibility));
     setManualMode(detail.manualMode);
     setEditorModules(detail.modules.map(module => module.type));
     setActiveModule(detail.modules[0]?.type ?? "outros");
@@ -498,6 +506,7 @@ export default function Home() {
     setEditorTitle(homebrew.title);
     setEditorSummary(homebrew.summary);
     setEditorVisibility(normalizeHomebrewVisibility(homebrew.visibility));
+    setPersistedVisibility(normalizeHomebrewVisibility(homebrew.visibility));
     setManualMode(homebrew.manualMode);
     setActiveHomebrewId(homebrew.id > 0 ? homebrew.id : null);
     setCoverImageUrl("");
@@ -509,7 +518,7 @@ export default function Home() {
   };
 
   const copyShareLink = async () => {
-    const currentVisibility = activeDetail?.visibility ?? (!activeHomebrewId ? "public" : "private");
+    const currentVisibility = activeHomebrewId ? persistedVisibility : "public";
     const shareId = activeDetail?.shareId ?? (!activeHomebrewId ? "jardim-demo" : "");
     if (!isShareableVisibility(currentVisibility) || !shareId) {
       toast.info("Para compartilhar, escolha Não listada ou Pública e salve a Homebrew.");
@@ -525,7 +534,7 @@ export default function Home() {
   };
 
   const openSharedHomebrew = () => {
-    const currentVisibility = activeDetail?.visibility ?? (!activeHomebrewId ? "public" : "private");
+    const currentVisibility = activeHomebrewId ? persistedVisibility : "public";
     const shareId = activeDetail?.shareId ?? (!activeHomebrewId ? "jardim-demo" : "");
     if (!isShareableVisibility(currentVisibility) || !shareId) {
       toast.info("Para abrir a ficha pública, escolha Não listada ou Pública e salve a Homebrew.");

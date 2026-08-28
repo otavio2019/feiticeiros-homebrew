@@ -157,3 +157,4 @@
 - [ ] Corrigir o vazamento de estado ao criar ou abrir uma Homebrew, pois a ficha temporária de Shikigami publicada herdou módulos e conteúdo de outra Homebrew.
 - [ ] Diagnosticar e corrigir o fluxo de compartilhamento de Homebrews, incluindo geração de link, permissões de visibilidade e abertura da ficha pública.
 - [ ] Permitir alterar a visibilidade no editor e impedir copiar ou abrir links de Homebrews privadas, orientando o autor a usar "Não listada" ou "Pública".
+- [ ] Sincronizar a visibilidade persistida após salvar antes de liberar o link, impedindo bloqueios indevidos no mesmo editor.
